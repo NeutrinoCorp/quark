@@ -21,35 +21,42 @@ type Message struct {
 }
 
 type metadata struct {
-	CorrelationId string      `json:"correlation_id"`
-	Host          string      `json:"host"`
-	SpanContext   interface{} `json:"span_context"`
+	CorrelationId   string      `json:"correlation_id"`
+	Host            string      `json:"host"`
+	Queue           string      `json:"queue"`
+	RedeliveryCount int         `json:"redelivery_count"`
+	SpanContext     interface{} `json:"span_context"`
 }
 
-func NewMessage(kind string, occurredTime time.Time, attributes interface{}) *Message {
+func NewMessage(kind, queue string, occurredTime time.Time, attributes interface{}) *Message {
+	id := uuid.New().String()
 	return &Message{
-		Id:           uuid.New().String(),
+		Id:           id,
 		Kind:         kind,
 		OccurredTime: occurredTime.UTC(),
 		Attributes:   attributes,
 		Metadata: metadata{
-			CorrelationId: uuid.New().String(),
-			Host:          getLocalIP(),
-			SpanContext:   nil,
+			CorrelationId:   id,
+			Host:            getLocalIP(),
+			Queue:           queue,
+			RedeliveryCount: 0,
+			SpanContext:     nil,
 		},
 	}
 }
 
-func NewMessageFromParent(parentId string, kind string, occurredTime time.Time, attributes interface{}) *Message {
+func NewMessageFromParent(parentId, kind, queue string, occurredTime time.Time, attributes interface{}) *Message {
 	return &Message{
 		Id:           uuid.New().String(),
 		Kind:         kind,
 		OccurredTime: occurredTime.UTC(),
 		Attributes:   attributes,
 		Metadata: metadata{
-			CorrelationId: parentId,
-			Host:          getLocalIP(),
-			SpanContext:   nil,
+			CorrelationId:   parentId,
+			Host:            getLocalIP(),
+			Queue:           queue,
+			RedeliveryCount: 0,
+			SpanContext:     nil,
 		},
 	}
 }
