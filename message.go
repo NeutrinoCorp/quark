@@ -62,8 +62,8 @@ func (m *Message) UnmarshalBinary(msg []byte) error {
 	return json.Unmarshal(msg, m)
 }
 
-func (m *Message) Encode() ([]byte, error) {
-	return json.Marshal(*m)
+func (m Message) Encode() ([]byte, error) {
+	return json.Marshal(m)
 }
 
 func (m Message) Length() int {
