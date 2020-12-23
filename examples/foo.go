@@ -1,18 +1,29 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
 	"github.com/neutrinocorp/quark/pkg"
 )
 
+type AWSPublisher struct{}
+
+func (a AWSPublisher) Publish(ctx context.Context, msg *pkg.Message) error {
+	log.Print("publishing message to AWS")
+	return nil
+}
+
 type NotificationHandler struct{}
 
-func (h NotificationHandler) ServeEvent(_ pkg.EventWriter, e *pkg.Event) {
+func (h NotificationHandler) ServeEvent(_ pkg.EventWriter, e *pkg.Event) bool {
 	log.Print("received notification from " + e.Topic)
 	log.Print(e.Body)
+	return true
 }
 
 func LogErrors() func(error) {
@@ -24,40 +35,75 @@ func LogErrors() func(error) {
 func main() {
 	// BDD clause
 	// Create broker
-	b := pkg.NewBroker()
-
-	// Example: Chat
-	b.Topic("chat.0").PoolSize(4).HandleFunc(func(w pkg.EventWriter, e *pkg.Event) {
-		_ = w.Write(e.Context, "chat.1", []byte("hello"))
+	b, err := pkg.NewBroker(pkg.KafkaProvider, pkg.KafkaConfiguration{
+		Config: nil,
 	})
-	b.Topic("chat.1").HandleFunc(func(w pkg.EventWriter, e *pkg.Event) {
-		_ = w.Write(e.Context, "chat.0", []byte("goodbye"))
+	if err != nil {
+		panic(err)
+	}
+	b.Cluster = []string{"localhost:9092"}
+
+	// Example: Chat, communication between multiple topics
+	b.Topic("chat.0").PoolSize(4).HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+		_ = w.Write(e.Context, []byte("hello"), "chat.1")
+		return true
+	})
+	b.Topic("chat.1").HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+		_ = w.Write(e.Context, []byte("goodbye"), "chat.0")
+		return true
 	})
 
-	// Example: Listen to multiple notifications
+	// Example: Listen to multiple notifications using specific resiliency configurations
 	b.Topics("bob.notifications", "alice.notifications").MaxRetries(5).RetryBackoff(time.Second * 3).
 		Handle(NotificationHandler{})
 
-	// Example: Listen to a feed, then fail
-	b.Topic("alice.feed").PoolSize(10).HandleFunc(func(w pkg.EventWriter, e *pkg.Event) {
-		_ = w.Write(e.Context, "dlq.feed", []byte("failed to process message"))
+	// Example: Listen to some user trading using custom publisher provider and sending a response to multiple topics
+	b.Topic("alex.trades").Publisher(AWSPublisher{}).HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+		_ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
+			"aws.alex.trades", "aws.analytics.trades")
+		return true
 	})
 
-	// Example: Truck GPS tracker, use custom provider and address, then fail temporarily (retry queue)
-	b.Topic("retry.truck.0.gps").Provider(pkg.KafkaProvider).Address("localhost:9092", "localhost:9093").
-		HandleFunc(func(w pkg.EventWriter, e *pkg.Event) {
-			if e.Body.Metadata.RedeliveryCount >= 3 {
-				return // avoid loops
-			}
+	// Example: Listen to a feed failing completely (send message to DLQ)
+	b.Topic("alice.feed").PoolSize(10).HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+		_ = w.Write(e.Context, []byte("failed to process message"), "dlq.feed")
+		return true
+	})
 
-			msg := pkg.NewMessageFromParent(e.Body.Metadata.CorrelationId, e.Body.Kind, e.Body.Attributes)
+	// Example: Truck GPS tracker using a custom provider and address, fail temporarily (sending message to retry queue)
+	b.Topic("retry.truck.0.gps").Provider(pkg.KafkaProvider).Address("localhost:9092", "localhost:9093").
+		HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+			if e.Body.Metadata.RedeliveryCount >= 3 {
+				return true // avoid loops
+			}
 			e.Body.Metadata.RedeliveryCount++
 			w.Header().Set("redelivery_count", strconv.Itoa(e.Body.Metadata.RedeliveryCount))
+			msg := pkg.NewMessageFromParent(e.Body.Metadata.CorrelationId, e.Body.Kind, e.Body.Attributes)
 			_ = w.WriteMessage(e.Context, msg)
 			// _ = w.Publisher().Publish(e.Context, e.Body) is also valid but will not write given headers
+			return true
 		})
 
 	b.ErrorHandler = LogErrors()
 
-	_ = b.ListenAndServe()
+	// graceful shutdown
+	stop := make(chan os.Signal)
+	signal.Notify(stop, os.Interrupt)
+	go func() {
+		if err = b.ListenAndServe(); err != nil && err != pkg.ErrBrokerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	<-stop
+
+	log.Printf("stopping %d nodes and %d workers", b.RunningNodes(), b.RunningWorkers())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	if err = b.Shutdown(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Print(b.RunningNodes(), b.RunningWorkers()) // should be 0,0
 }

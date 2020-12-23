@@ -40,9 +40,12 @@ func (b *defaultMux) Topic(topic string) *Consumer {
 func (b *defaultMux) Topics(topics ...string) *Consumer {
 	c := new(Consumer)
 	c.Topics(topics...)
-	for _, t := range topics {
-		b.consumers.Store(t, c)
-	}
+	b.consumers.Store(c.TopicString(), c)
+	/*
+		Adds a worker pool per-topic when fan-in is required, maybe it is not a great idea to use this
+		for _, t := range topics {
+			b.consumers.Store(t, c)
+		}*/
 	return c
 }
 

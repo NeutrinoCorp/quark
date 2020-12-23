@@ -16,6 +16,8 @@ type Consumer struct {
 	providerConfig interface{}
 	// Cluster ip address(es) with its respective port(s) of the Message Broker/Message Queue system cluster
 	cluster []string
+	// Publisher pushes the given Message into the Event-Driven ecosystem.
+	publisher Publisher
 	// PoolSize worker pool size
 	poolSize int
 	// MaxRetries total times to retry consuming messages if a node fails
@@ -35,7 +37,7 @@ func (c *Consumer) Topic(topic string) *Consumer {
 	return c
 }
 
-// Topics Quark will use these topics to subscribe the Consumer
+// Topics A Broker will use these topics to subscribe the Consumer to fan-in processing
 //	These fields can be also used as Queues
 func (c *Consumer) Topics(topics ...string) *Consumer {
 	c.topics = append(c.topics, topics...)
@@ -83,12 +85,33 @@ func (c *Consumer) Address(addrs ...string) *Consumer {
 	return c
 }
 
+// Publisher pushes the given Message into the Event-Driven ecosystem.
+func (c *Consumer) Publisher(p Publisher) *Consumer {
+	c.publisher = p
+	return c
+}
+
 // Handle specific struct Quark will use to send messages
-func (c *Consumer) Handle(handler Handler) {
+func (c *Consumer) Handle(handler Handler) *Consumer {
 	c.handler = handler
+	return c
 }
 
 // HandleFunc specific func Quark will use to send messages
-func (c *Consumer) HandleFunc(handlerFunc HandlerFunc) {
+func (c *Consumer) HandleFunc(handlerFunc HandlerFunc) *Consumer {
 	c.handlerFunc = handlerFunc
+	return c
+}
+
+// TopicString returns every topic registered into the current consumer as string
+func (c Consumer) TopicString() string {
+	topics := ""
+	for i, t := range c.topics {
+		if i > 0 {
+			topics += ","
+		}
+		topics += t
+	}
+
+	return topics
 }
