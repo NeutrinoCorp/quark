@@ -19,7 +19,7 @@ func main() {
 	b.Topics("chat.0", "chat.2").Group("neutrino-group-0").PoolSize(3).
 		HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
 			log.Printf("received message from consumer group: %s", e.Header.Get(pkg.HeaderConsumerGroup))
-			log.Printf("message: %s", string(e.Header.Get(pkg.HeaderKafkaValue)))
+			log.Printf("message: %s", e.Header.Get(pkg.HeaderKafkaValue))
 			if err := w.Write(e.Context, []byte("hello"), "chat.1"); err != nil {
 				log.Print(err)
 			}

@@ -14,6 +14,10 @@ func ensureValidProvider(provider string, providerCfg interface{}) error {
 		if _, ok := providerCfg.(KafkaConfiguration); ok {
 			return nil
 		}
+	case AWSProvider:
+		if _, ok := providerCfg.(AWSConfiguration); ok {
+			return nil
+		}
 	}
 
 	return ErrProviderNotValid

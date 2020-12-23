@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"context"
-	"log"
 	"strconv"
 	"time"
 )
@@ -53,7 +52,6 @@ func (d *defaultEventWriter) Header() Header {
 }
 
 func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...string) error {
-	log.Print("writing message")
 	if d.publisher == nil {
 		return ErrPublisherNotImplemented
 	} else if len(topics) == 0 {

@@ -3,7 +3,8 @@ package pkg
 import (
 	"context"
 	"log"
-	"strconv"
+
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/Shopify/sarama"
 )
@@ -31,6 +32,7 @@ func (k *kafkaWorker) StartJob(ctx context.Context) error {
 	return k.startConsumer(ctx)
 }
 
+// might delete this since we already have default groups using topics names
 func (k *kafkaWorker) ensureGroup() error {
 	if len(k.parent.Consumer.topics) > 1 && k.parent.Consumer.group == "" {
 		return ErrRequiredGroup
@@ -75,48 +77,32 @@ func (k *kafkaWorker) startConsumer(ctx context.Context) error {
 		go k.parent.Broker.ErrorHandler(<-k.partitioner.Errors())
 	}
 
-	for msgConsumer := range k.partitioner.Messages() {
-		eventCtx := ctx
-		h := PopulateKafkaEventHeaders(msgConsumer)
-		h.Set(HeaderKafkaHighWaterMarkOffset, strconv.Itoa(int(k.partitioner.HighWaterMarkOffset())))
-		e := &Event{
-			Context:    eventCtx,
-			Topic:      msgConsumer.Topic,
-			Header:     h,
-			Body:       UnmarshalKafkaHeaders(msgConsumer),
-			RawSession: k.partitioner,
-		}
-
-		if k.parent.Consumer.handler != nil {
-			k.parent.Consumer.handler.ServeEvent(k.parent.setDefaultEventWriter(), e)
-		}
-		if k.parent.Consumer.handlerFunc != nil {
-			k.parent.Consumer.handlerFunc(k.parent.setDefaultEventWriter(), e)
-		}
-	}
+	k.setDefaultConsumerPartitionHandler().Consume(ctx, k.partitioner, k.parent.Consumer,
+		k.parent.setDefaultEventWriter())
 
 	return nil
 }
 
 func (k *kafkaWorker) Close() error {
 	log.Print(k.parent.Consumer.topics, "closing worker")
+	errs := new(multierror.Error)
 	if k.group != nil {
 		if err := k.group.Close(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	if k.consumer != nil {
 		if err := k.consumer.Close(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	if k.partitioner != nil {
 		if err := k.partitioner.Close(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 
-	return nil
+	return errs.ErrorOrNil()
 }
 
 func (k *kafkaWorker) setDefaultConsumerGroupHandler() sarama.ConsumerGroupHandler {
@@ -127,4 +113,11 @@ func (k *kafkaWorker) setDefaultConsumerGroupHandler() sarama.ConsumerGroupHandl
 	return &defaultKafkaConsumer{
 		worker: k,
 	}
+}
+
+func (k *kafkaWorker) setDefaultConsumerPartitionHandler() KafkaPartitionConsumer {
+	if k.cfg.ConsumerPartitionHandler != nil {
+		return k.cfg.ConsumerPartitionHandler
+	}
+	return &defaultKafkaPartitionConsumer{}
 }

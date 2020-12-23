@@ -38,16 +38,14 @@ func newNode(b *Broker, c *Consumer) *node {
 }
 
 func (n *node) Consume(ctx context.Context) error {
-	if len(n.setDefaultCluster()) == 0 {
-		return ErrEmptyCluster
-	} else if len(n.Consumer.topics) == 0 {
-		return ErrNotEnoughTopics
+	if err := n.ensureValidParams(); err != nil {
+		return err
 	}
 	errs := new(multierror.Error)
 	// Start worker jobs, these are Blocking I/O and each working should create a new goroutine.
 	//
 	// We cannot create goroutines from here because sync.Pool malloc reference is pooled back if we do so.
-	// Besides, starting a worker job is thread-safe.
+	// Besides, starting a worker job is already thread-safe.
 	for i := 0; i < n.setDefaultPoolSize(); i++ {
 		if w, ok := n.workers.Get().(worker); w != nil && ok {
 			workerCtx := ctx
@@ -63,6 +61,17 @@ func (n *node) Consume(ctx context.Context) error {
 	}
 
 	return errs.ErrorOrNil()
+}
+
+func (n *node) ensureValidParams() error {
+	if len(n.setDefaultCluster()) == 0 {
+		return ErrEmptyCluster
+	} else if len(n.Consumer.topics) == 0 {
+		return ErrNotEnoughTopics
+	} else if n.Consumer.handlerFunc == nil && n.Consumer.handler == nil {
+		return ErrNotEnoughHandlers
+	}
+	return nil
 }
 
 func (n *node) Close() error {
