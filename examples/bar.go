@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/google/uuid"
 	"github.com/neutrinocorp/quark/pkg"
 )
 
@@ -16,11 +17,13 @@ func main() {
 	b := pkg.NewKafkaBroker(newSaramaCfg(), "localhost:9092")
 
 	// Example: Chat, communication between multiple topics
-	b.Topics("chat.0", "chat.2").Group("neutrino-group-0").PoolSize(3).
+	b.Topics("chat.0", "chat.2").Group("neutrino-group-0").PoolSize(3).MaxRetries(3).
 		HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
 			log.Printf("received message from consumer group: %s", e.Header.Get(pkg.HeaderConsumerGroup))
 			log.Printf("message: %s", e.Header.Get(pkg.HeaderKafkaValue))
-			if err := w.Write(e.Context, []byte("hello"), "chat.1"); err != nil {
+
+			w.Header().Set(pkg.HeaderSpanContext, uuid.New().String())
+			if err := w.Write(e.Context, []byte(e.Header.Get(pkg.HeaderKafkaValue)), "chat.1"); err != nil {
 				log.Print(err)
 			}
 			return true
@@ -64,5 +67,7 @@ func newSaramaCfg() *sarama.Config {
 	config := sarama.NewConfig()
 	config.ClientID = "neutrino-sample"
 	config.Consumer.Return.Errors = true
+	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
 	return config
 }

@@ -69,3 +69,11 @@ func NewMessageFromParent(parentId, kind string, attributes []byte) *Message {
 		},
 	}
 }
+
+func (m Message) Encode() ([]byte, error) {
+	return m.Attributes, nil
+}
+
+func (m Message) Length() int {
+	return len(m.Attributes)
+}

@@ -10,6 +10,7 @@ const (
 	HeaderMessageRedeliveryCount = "quark-metadata-redelivery-count"
 
 	HeaderConsumerGroup = "quark-consumer-group"
+	HeaderSpanContext   = "quark-span-context"
 
 	HeaderKafkaPartition           = "quark-kafka-partition"
 	HeaderKafkaOffset              = "quark-kafka-offset"

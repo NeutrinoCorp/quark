@@ -143,7 +143,7 @@ func (n *node) setDefaultPublisher() Publisher {
 		return n.Broker.Publisher // use global
 	}
 
-	return getDefaultPublisher(n.setDefaultProvider())
+	return getDefaultPublisher(n.setDefaultProvider(), n.setDefaultProviderConfig(), n.setDefaultCluster())
 }
 
 func (n *node) setDefaultEventWriter() EventWriter {

@@ -2,8 +2,11 @@ package pkg
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"time"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 // EventWriter works as an Event response writer.
@@ -57,49 +60,55 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	} else if len(topics) == 0 {
 		return ErrNotEnoughTopics
 	}
+	errs := new(multierror.Error)
 	for _, t := range topics {
+		log.Printf(t)
 		m := NewMessage(t, msg)
 		d.parseHeader(m)
 		if m.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
-			return nil // avoid loops
+			continue // avoid distributed loops (at macro scale)
 		}
 		time.Sleep(d.node.setDefaultRetryBackoff() * time.Duration(m.Metadata.RedeliveryCount))
 		if err := d.publisher.Publish(ctx, m); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
+			continue
 		}
 	}
-	return nil
+	return errs.ErrorOrNil()
 }
 
+// TODO: Add new return value (int) to tell user how many messages were published/written
 func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message) error {
 	if d.publisher == nil {
 		return ErrPublisherNotImplemented
 	}
+	errs := new(multierror.Error)
 	for _, msg := range msgs {
 		d.parseHeader(msg)
 		if msg.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
-			return nil // avoid loops
+			continue // avoid distributed loops (at macro scale)
 		}
 		time.Sleep(d.node.setDefaultRetryBackoff() * time.Duration(msg.Metadata.RedeliveryCount))
 		if err := d.publisher.Publish(ctx, msg); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
+			continue
 		}
 	}
-	return nil
+	return errs.ErrorOrNil()
 }
 
 func (d *defaultEventWriter) parseHeader(msg *Message) {
 	for k, v := range d.header {
 		switch k {
-		case "topic":
+		case HeaderMessageKind:
 			msg.Kind = v
-		case "correlation_id":
+		case HeaderMessageCorrelationId:
 			msg.Metadata.CorrelationId = v
-		case "redelivery_count":
+		case HeaderMessageRedeliveryCount:
 			if c, err := strconv.Atoi(v); err == nil {
 				msg.Metadata.RedeliveryCount = c
 			}
-		case "host":
+		case HeaderMessageHost:
 			msg.Metadata.Host = v
 		default:
 			msg.Metadata.ExternalData[k] = v

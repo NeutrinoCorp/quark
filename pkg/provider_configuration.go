@@ -1,12 +1,18 @@
 package pkg
 
-import "github.com/Shopify/sarama"
+import (
+	"context"
+
+	"github.com/Shopify/sarama"
+)
 
 type KafkaConfiguration struct {
 	Config                   *sarama.Config
 	ConsumerGroupHandler     sarama.ConsumerGroupHandler
 	ConsumerPartitionHandler KafkaPartitionConsumer
 	ConsumerTopic            kafkaConsumerTopicConfig
+	// Hook
+	ProducerOnSent func(ctx context.Context, message *sarama.ProducerMessage, partition int32, offset int64)
 }
 
 type kafkaConsumerTopicConfig struct {

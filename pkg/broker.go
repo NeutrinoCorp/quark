@@ -67,12 +67,14 @@ func NewKafkaBroker(cfg *sarama.Config, addrs ...string) *Broker {
 	return &Broker{
 		Provider: KafkaProvider,
 		ProviderConfig: KafkaConfiguration{
-			Config:               cfg,
-			ConsumerGroupHandler: nil,
+			Config:                   cfg,
+			ConsumerGroupHandler:     nil,
+			ConsumerPartitionHandler: nil,
 			ConsumerTopic: kafkaConsumerTopicConfig{
 				Partition: 0,
 				Offset:    sarama.OffsetNewest,
 			},
+			ProducerOnSent: nil,
 		},
 		Cluster:      addrs,
 		ErrorHandler: nil,
