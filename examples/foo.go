@@ -13,7 +13,7 @@ import (
 
 type AWSPublisher struct{}
 
-func (a AWSPublisher) Publish(ctx context.Context, msg *pkg.Message) error {
+func (a AWSPublisher) Publish(ctx context.Context, msgs ...*pkg.Message) error {
 	log.Print("publishing message to AWS")
 	return nil
 }

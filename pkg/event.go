@@ -8,8 +8,9 @@ import (
 //
 // For example, this could be either a domain event or an asynchronous command.
 type Event struct {
-	Context context.Context
-	Topic   string
-	Header  Header
-	Body    *Message
+	Context    context.Context
+	Topic      string
+	Header     Header
+	Body       *Message
+	RawSession interface{}
 }

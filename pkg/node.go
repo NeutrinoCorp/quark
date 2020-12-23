@@ -19,7 +19,6 @@ type node struct {
 
 	workers        sync.Pool
 	runningWorkers *queue.Queue
-	mu             sync.Mutex
 }
 
 func newNode(b *Broker, c *Consumer) *node {
@@ -28,7 +27,6 @@ func newNode(b *Broker, c *Consumer) *node {
 		Consumer:       c,
 		workers:        sync.Pool{},
 		runningWorkers: queue.New(),
-		mu:             sync.Mutex{},
 	}
 	n.workers = sync.Pool{
 		New: func() interface{} {
@@ -42,8 +40,9 @@ func newNode(b *Broker, c *Consumer) *node {
 func (n *node) Consume(ctx context.Context) error {
 	if len(n.setDefaultCluster()) == 0 {
 		return ErrEmptyCluster
+	} else if len(n.Consumer.topics) == 0 {
+		return ErrNotEnoughTopics
 	}
-
 	errs := new(multierror.Error)
 	// Start worker jobs, these are Blocking I/O and each working should create a new goroutine.
 	//
@@ -62,6 +61,7 @@ func (n *node) Consume(ctx context.Context) error {
 		errs = multierror.Append(errs, fmt.Errorf("topic(s) %s: %w", n.Consumer.TopicString(),
 			ErrProviderNotValid))
 	}
+
 	return errs.ErrorOrNil()
 }
 
@@ -118,4 +118,29 @@ func (n *node) setDefaultCluster() []string {
 		return cluster
 	}
 	return n.Broker.Cluster // use global
+}
+
+func (n *node) setDefaultGroup() string {
+	if group := n.Consumer.group; group != "" {
+		return group
+	}
+	return n.Consumer.TopicString() // use topics as default
+}
+
+func (n *node) setDefaultPublisher() Publisher {
+	if n.Consumer.publisher != nil {
+		return n.Consumer.publisher
+	} else if n.Broker.Publisher != nil {
+		return n.Broker.Publisher // use global
+	}
+
+	return getDefaultPublisher(n.setDefaultProvider())
+}
+
+func (n *node) setDefaultEventWriter() EventWriter {
+	if n.Broker.EventWriter != nil {
+		return n.Broker.EventWriter
+	}
+
+	return newEventWriter(n, n.setDefaultPublisher())
 }

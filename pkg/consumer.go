@@ -14,6 +14,10 @@ type Consumer struct {
 	provider string
 	// ProviderConfig Custom provider configuration (e.g. sarama config, aws credentials)
 	providerConfig interface{}
+	// Group set of consumers this specific consumer must be with to consume messages in parallel
+	//
+	// 	Only available in: Apache Kafka
+	group string
 	// Cluster ip address(es) with its respective port(s) of the Message Broker/Message Queue system cluster
 	cluster []string
 	// Publisher pushes the given Message into the Event-Driven ecosystem.
@@ -82,6 +86,14 @@ func (c *Consumer) Config() interface{} {
 // Address ip address(es) with its respective port(s) of the Message Broker/Message Queue system cluster
 func (c *Consumer) Address(addrs ...string) *Consumer {
 	c.cluster = addrs
+	return c
+}
+
+// Group set of consumers this specific consumer must be with to consume messages in parallel
+//
+// 	Only available in: Apache Kafka
+func (c *Consumer) Group(g string) *Consumer {
+	c.group = g
 	return c
 }
 

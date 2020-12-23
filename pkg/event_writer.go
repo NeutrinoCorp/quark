@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"time"
 )
@@ -24,8 +25,8 @@ type EventWriter interface {
 	// WriteMessage push the given message into the Event-Driven ecosystem.
 	//
 	// Returns non-nil error if publisher failed to push Event
-	//	This function is limited to push the given message to only one topic (specified as "Kind" in Message fields)
-	WriteMessage(context.Context, *Message) error
+	//	Remember Quark uses Message's "Kind" field as topic name, so the developer must specify it
+	WriteMessage(context.Context, ...*Message) error
 }
 
 type defaultEventWriter struct {
@@ -51,7 +52,8 @@ func (d *defaultEventWriter) Header() Header {
 	return d.header
 }
 
-func (d defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...string) error {
+func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...string) error {
+	log.Print("writing message")
 	if d.publisher == nil {
 		return ErrPublisherNotImplemented
 	} else if len(topics) == 0 {
@@ -71,19 +73,24 @@ func (d defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...str
 	return nil
 }
 
-func (d defaultEventWriter) WriteMessage(ctx context.Context, msg *Message) error {
+func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message) error {
 	if d.publisher == nil {
 		return ErrPublisherNotImplemented
 	}
-	d.parseHeader(msg)
-	if msg.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
-		return nil // avoid loops
+	for _, msg := range msgs {
+		d.parseHeader(msg)
+		if msg.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
+			return nil // avoid loops
+		}
+		time.Sleep(d.node.setDefaultRetryBackoff() * time.Duration(msg.Metadata.RedeliveryCount))
+		if err := d.publisher.Publish(ctx, msg); err != nil {
+			return err
+		}
 	}
-	time.Sleep(d.node.setDefaultRetryBackoff() * time.Duration(msg.Metadata.RedeliveryCount))
-	return d.publisher.Publish(ctx, msg)
+	return nil
 }
 
-func (d defaultEventWriter) parseHeader(msg *Message) {
+func (d *defaultEventWriter) parseHeader(msg *Message) {
 	for k, v := range d.header {
 		switch k {
 		case "topic":

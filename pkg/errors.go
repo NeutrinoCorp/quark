@@ -8,4 +8,5 @@ var (
 	ErrPublisherNotImplemented = errors.New("publisher is not implemented")
 	ErrNotEnoughTopics         = errors.New("not enough topics")
 	ErrEmptyCluster            = errors.New("consumer cluster is empty")
+	ErrRequiredGroup           = errors.New("consumer group is required")
 )
