@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"context"
-	"log"
 
 	"github.com/Shopify/sarama"
 	"github.com/hashicorp/go-multierror"
@@ -14,10 +13,6 @@ type defaultKafkaPublisher struct {
 }
 
 func (d *defaultKafkaPublisher) Publish(ctx context.Context, messages ...*Message) error {
-	log.Print("publishing event!")
-	for _, msg := range messages {
-		log.Printf("%+v", msg)
-	}
 	p, err := sarama.NewSyncProducer(d.cluster, d.cfg.Config)
 	if err != nil {
 		return err
