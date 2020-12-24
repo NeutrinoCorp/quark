@@ -8,6 +8,8 @@ import (
 //
 // It handles all the work and should be running inside a goroutine to enable parallelism.
 type worker interface {
+	// SetID inject the current worker id
+	SetID(i int)
 	// Parent returns the parent node
 	Parent() *node
 	// StartJob starts an specific work
@@ -33,6 +35,7 @@ func newWorker(parent *node) worker {
 	case KafkaProvider:
 		if cfg, ok := providerCfg.(KafkaConfiguration); ok {
 			return &kafkaWorker{
+				id:     0,
 				parent: parent,
 				cfg:    cfg,
 			}
@@ -41,6 +44,7 @@ func newWorker(parent *node) worker {
 	case AWSProvider:
 		if cfg, ok := providerCfg.(AWSConfiguration); ok {
 			return &awsWorker{
+				id:     0,
 				parent: parent,
 				cfg:    cfg,
 			}

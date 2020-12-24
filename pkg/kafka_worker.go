@@ -2,13 +2,16 @@ package pkg
 
 import (
 	"context"
+	"errors"
 	"log"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/hashicorp/go-multierror"
 )
 
 type kafkaWorker struct {
+	id     int
 	parent *node
 	cfg    KafkaConfiguration
 
@@ -17,12 +20,16 @@ type kafkaWorker struct {
 	partitioner sarama.PartitionConsumer
 }
 
+func (k *kafkaWorker) SetID(i int) {
+	k.id = i
+}
+
 func (k *kafkaWorker) Parent() *node {
 	return k.parent
 }
 
 func (k *kafkaWorker) StartJob(ctx context.Context) error {
-	log.Print(k.parent.Consumer.topics, k.parent.setDefaultProvider())
+	log.Printf("topics: %v | worker_id: %d | provider: %s", k.parent.Consumer.topics, k.id, k.parent.setDefaultProvider())
 	if err := k.ensureGroup(); err != nil {
 		return err
 	} else if len(k.parent.Consumer.topics) > 1 || k.parent.Consumer.group != "" {
@@ -48,14 +55,40 @@ func (k *kafkaWorker) startConsumerGroup(ctx context.Context) error {
 	k.group = group
 
 	if k.cfg.Config.Consumer.Return.Errors && k.parent.Broker.ErrorHandler != nil {
-		go k.parent.Broker.ErrorHandler(<-k.group.Errors())
+		go func() {
+			for e := range k.group.Errors() {
+				if k.parent.Broker.ErrorHandler != nil {
+					k.parent.Broker.ErrorHandler(ctx, e)
+				}
+			}
+		}()
 	}
 
-	for {
-		if err = k.group.Consume(ctx, k.parent.Consumer.topics, k.setDefaultConsumerGroupHandler()); err != nil {
-			return err
+	// blocking I/O
+	go func() {
+		retries := 0
+		for {
+			err = k.group.Consume(ctx, k.parent.Consumer.topics, k.setDefaultConsumerGroupHandler())
+			if errors.Is(err, sarama.ErrClosedConsumerGroup) {
+				return
+			} else if errors.Is(err, sarama.ErrOutOfBrokers) {
+				if retries <= k.parent.Broker.setDefaultConnRetries() {
+					retries++
+					time.Sleep(k.parent.Broker.setDefaultConnRetryBackoff() * time.Duration(retries))
+					continue
+				}
+			}
+
+			if err != nil {
+				if k.parent.Broker.ErrorHandler != nil {
+					go k.parent.Broker.ErrorHandler(ctx, err)
+				}
+				return
+			}
 		}
-	}
+	}()
+
+	return nil
 }
 
 func (k *kafkaWorker) startConsumer(ctx context.Context) error {
@@ -73,29 +106,40 @@ func (k *kafkaWorker) startConsumer(ctx context.Context) error {
 	k.partitioner = cPartition
 
 	if k.cfg.Config.Consumer.Return.Errors && k.parent.Broker.ErrorHandler != nil {
-		go k.parent.Broker.ErrorHandler(<-k.partitioner.Errors())
+		go func() {
+			for e := range k.partitioner.Errors() {
+				if k.parent.Broker.ErrorHandler != nil {
+					k.parent.Broker.ErrorHandler(ctx, e)
+				}
+			}
+		}()
 	}
 
-	k.setDefaultConsumerPartitionHandler().Consume(ctx, k.partitioner, k.parent.Consumer,
-		k.parent.setDefaultEventWriter())
+	// Blocking I/O
+	go func() {
+		k.setDefaultConsumerPartitionHandler().Consume(ctx, k.partitioner, k.parent.Consumer,
+			k.parent.setDefaultEventWriter())
+	}()
 
 	return nil
 }
 
 func (k *kafkaWorker) Close() error {
-	log.Print(k.parent.Consumer.topics, "closing worker")
 	errs := new(multierror.Error)
 	if k.group != nil {
+		log.Printf("topics: %v | worker_id: %d | closing worker", k.parent.Consumer.topics, k.id)
 		if err := k.group.Close(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
 	if k.consumer != nil {
+		log.Printf("topics: %v | worker_id: %d | closing worker", k.parent.Consumer.topics, k.id)
 		if err := k.consumer.Close(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
 	if k.partitioner != nil {
+		log.Printf("topics: %v | worker_id: %d | closing worker", k.parent.Consumer.topics, k.id)
 		if err := k.partitioner.Close(); err != nil {
 			errs = multierror.Append(errs, err)
 		}

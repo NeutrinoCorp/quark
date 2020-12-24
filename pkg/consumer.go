@@ -24,7 +24,7 @@ type Consumer struct {
 	publisher Publisher
 	// PoolSize worker pool size
 	poolSize int
-	// MaxRetries total times to retry consuming messages if a node fails
+	// MaxRetries total times to retry consuming messages if processing fails
 	maxRetries int
 	// RetryBackoff time to wait between each retry
 	retryBackoff time.Duration
@@ -54,7 +54,7 @@ func (c *Consumer) PoolSize(s int) *Consumer {
 	return c
 }
 
-// MaxRetries total times to retry consuming messages if a node fails
+// MaxRetries total times to retry consuming messages if processing fails
 func (c *Consumer) MaxRetries(n int) *Consumer {
 	c.maxRetries = n
 	return c

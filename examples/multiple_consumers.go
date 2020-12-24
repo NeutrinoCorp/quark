@@ -7,9 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/neutrinocorp/quark/internal"
-
-	"github.com/Shopify/sarama"
 	"github.com/neutrinocorp/quark"
 	"github.com/neutrinocorp/quark/brokers"
 )
@@ -47,11 +44,11 @@ func newConsumerNotifyUserOnMarketplaceSale() *quark.Consumer {
 	topicName := quark.FormatTopicName("neutrino", "marketplace", quark.MessageDomainEvent, "sale",
 		"published", 1)
 	queueName := quark.FormatQueueName("user", "notification", "notify_user", "sale_published")
-	defConsumer := &internal.KafkaConsumerHandler{}
+	//nil := &pkg.KafkaConsumerHandler{}
 
-	return quark.NewConsumer(topicName, queueName, 3, defConsumer, ErrHandle,
-		quark.NewRetry(topicName, queueName, 3, 1, defConsumer, ErrHandle),
-		quark.NewDeadLetter(topicName, queueName, 1, defConsumer, ErrHandle))
+	return quark.NewConsumer(topicName, queueName, 3, nil, ErrHandle,
+		quark.NewRetry(topicName, queueName, 3, 1, nil, ErrHandle),
+		quark.NewDeadLetter(topicName, queueName, 1, nil, ErrHandle))
 }
 
 func newConsumerNotifyOrgOnPayment() *quark.Consumer {
@@ -59,32 +56,9 @@ func newConsumerNotifyOrgOnPayment() *quark.Consumer {
 		"payed", 1)
 	queueName := quark.FormatQueueName("organization", "notification", "notify_organization",
 		"product_payed")
-	defConsumer := &internal.KafkaConsumerHandler{}
+	// nil := &pkg.KafkaConsumerHandler{}
 
-	return quark.NewConsumer(topicName, queueName, 3, defConsumer, ErrHandle,
-		quark.NewRetry(queueName, queueName, 3, 1, defConsumer, ErrHandle),
-		quark.NewDeadLetter(queueName, queueName, 1, defConsumer, ErrHandle))
-}
-
-func newSaramaCfg() *sarama.Config {
-	config := sarama.NewConfig()
-	config.ClientID = "neutrino-sample"
-	config.Consumer.Return.Errors = true
-	/*
-		config.Consumer.Offsets.Retention = time.Minute * 1
-		config.Consumer.Offsets.AutoCommit.Enable = true
-		config.Consumer.Offsets.Retry.Max = 3
-		config.Consumer.Group.Session.Timeout = time.Second * 10
-		config.Consumer.Retry.Backoff = time.Second * 2
-		config.Consumer.Group.Rebalance.Retry.Max = 4
-		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
-		config.Consumer.Offsets.Initial = sarama.OffsetOldest
-		config.Producer.Return.Errors = false
-		config.Producer.Idempotent = true
-		config.Net.MaxOpenRequests = 1
-		config.Producer.Return.Successes = false
-		config.Producer.Retry.Backoff = time.Millisecond * 100
-		config.Producer.Retry.Max = 3
-		config.Producer.RequiredAcks = sarama.WaitForAll*/
-	return config
+	return quark.NewConsumer(topicName, queueName, 3, nil, ErrHandle,
+		quark.NewRetry(queueName, queueName, 3, 1, nil, ErrHandle),
+		quark.NewDeadLetter(queueName, queueName, 1, nil, ErrHandle))
 }

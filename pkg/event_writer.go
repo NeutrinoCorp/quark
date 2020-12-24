@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"context"
-	"log"
 	"strconv"
 	"time"
 
@@ -66,7 +65,6 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, t := range topics {
-		log.Printf(t)
 		m := NewMessage(t, msg)
 		d.parseHeader(m)
 		if m.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {

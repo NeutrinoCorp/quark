@@ -6,8 +6,13 @@ import (
 )
 
 type awsWorker struct {
+	id     int
 	parent *node
 	cfg    AWSConfiguration
+}
+
+func (a *awsWorker) SetID(i int) {
+	a.id = i
 }
 
 func (a *awsWorker) Parent() *node {

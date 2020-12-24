@@ -49,6 +49,7 @@ func (n *node) Consume(ctx context.Context) error {
 	for i := 0; i < n.setDefaultPoolSize(); i++ {
 		if w, ok := n.workers.Get().(worker); w != nil && ok {
 			workerCtx := ctx
+			w.SetID(i)
 			if err := w.StartJob(workerCtx); err != nil {
 				errs = multierror.Append(errs, err)
 			} else {

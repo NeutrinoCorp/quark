@@ -16,29 +16,38 @@ func main() {
 	// Create broker
 	b := pkg.NewKafkaBroker(newSaramaCfg(), "localhost:9092")
 
+	b.ErrorHandler = func(ctx context.Context, err error) {
+		log.Print(err)
+	}
+
 	// Example: Chat, communication between multiple topics
 	b.Topics("chat.0", "chat.2").Group("neutrino-group-0").PoolSize(3).MaxRetries(3).
 		HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
 			log.Printf("received message from consumer group: %s", e.Header.Get(pkg.HeaderConsumerGroup))
 			log.Printf("message: %s", e.Header.Get(pkg.HeaderKafkaValue))
 
-			w.Header().Set(pkg.HeaderSpanContext, uuid.New().String())
+			spanId := uuid.New().String()
+			w.Header().Set(pkg.HeaderSpanContext, spanId)
 			_, _ = w.Write(e.Context, []byte(e.Header.Get(pkg.HeaderKafkaValue)), "chat.1")
 			return true
 		})
 
-	/*
-		b.Topics("chat.1").Group("neutrino-group-1").PoolSize(3).
-			HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
-				_, _ = w.Write(e.Context, []byte("hello"), "chat.3")
-				return true
-			})
+	b.Topics("chat.1").Group("neutrino-group-1").PoolSize(3).MaxRetries(3).
+		HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+			log.Printf("received message from consumer group: %s", e.Header.Get(pkg.HeaderConsumerGroup))
+			log.Printf("message: %s", e.Header.Get(pkg.HeaderKafkaValue))
+			log.Printf("span context: %s", e.Header.Get(pkg.HeaderSpanContext))
+			_, _ = w.Write(e.Context, []byte("hello"), "chat.3")
+			return true
+		})
 
-		b.Topic("chat.1").Group("neutrino-group-2").Provider(pkg.AWSProvider).ProviderConfig(pkg.AWSConfiguration{}).
-			HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
-				_, _ = w.Write(e.Context, []byte("hello"), "chat.3", "chat.4")
-				return true
-			})*/
+	b.Topic("chat.3").Group("neutrino-group-2").HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+		log.Printf("received message from consumer group: %s", e.Header.Get(pkg.HeaderConsumerGroup))
+		log.Printf("message: %s", e.Header.Get(pkg.HeaderKafkaValue))
+		log.Printf("span context: %s", e.Header.Get(pkg.HeaderSpanContext))
+		_, _ = w.Write(e.Context, []byte("hello"), "chat.4", "chat.5")
+		return true
+	})
 
 	// graceful shutdown
 	stop := make(chan os.Signal)

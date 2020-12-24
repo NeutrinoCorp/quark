@@ -14,16 +14,18 @@ import (
 //
 // Administrates Consumer(s) Nodes and their workers wrapped with well-known concurrency and resiliency patterns.
 type Broker struct {
-	Provider       string
-	ProviderConfig interface{}
-	Cluster        []string
-	ErrorHandler   func(error)
-	Publisher      Publisher
-	EventMux       EventMux
-	EventWriter    EventWriter
-	PoolSize       int
-	MaxRetries     int
-	RetryBackoff   time.Duration
+	Provider         string
+	ProviderConfig   interface{}
+	Cluster          []string
+	ErrorHandler     func(context.Context, error)
+	Publisher        Publisher
+	EventMux         EventMux
+	EventWriter      EventWriter
+	PoolSize         int
+	MaxRetries       int
+	RetryBackoff     time.Duration
+	ConnRetries      int
+	ConnRetryBackoff time.Duration
 
 	BaseContext context.Context
 
@@ -36,10 +38,12 @@ type Broker struct {
 }
 
 var (
-	defaultPoolSize      = 5
-	defaultMaxRetries    = 3
-	defaultRetryBackoff  = time.Second * 5
-	shutdownPollInterval = time.Millisecond * 500
+	defaultPoolSize         = 5
+	defaultMaxRetries       = 3
+	defaultRetryBackoff     = time.Second * 5
+	defaultConnRetries      = 3
+	defaultConnRetryBackoff = time.Second * 5
+	shutdownPollInterval    = time.Millisecond * 500
 )
 
 // NewBroker allocates and returns a Broker
@@ -233,4 +237,18 @@ func (b *Broker) setDefaultRetryBackoff() time.Duration {
 		return b.RetryBackoff
 	}
 	return defaultRetryBackoff
+}
+
+func (b *Broker) setDefaultConnRetries() int {
+	if b.ConnRetries > 0 {
+		return b.ConnRetries
+	}
+	return defaultConnRetries
+}
+
+func (b *Broker) setDefaultConnRetryBackoff() time.Duration {
+	if b.ConnRetryBackoff > 0 {
+		return b.ConnRetryBackoff
+	}
+	return defaultConnRetryBackoff
 }
