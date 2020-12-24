@@ -3,6 +3,11 @@ package quark
 import "errors"
 
 var (
-	ErrConsumerAlreadyRegistered = errors.New("subscribers was already registered")
-	ErrConsumerHandlerNotValid   = errors.New("consumer handler is not valid")
+	ErrBrokerClosed            = errors.New("broker closed")
+	ErrProviderNotValid        = errors.New("provider is not valid")
+	ErrPublisherNotImplemented = errors.New("publisher is not implemented")
+	ErrNotEnoughTopics         = errors.New("not enough topics")
+	ErrNotEnoughHandlers       = errors.New("not enough handlers")
+	ErrEmptyCluster            = errors.New("consumer cluster is empty")
+	ErrRequiredGroup           = errors.New("consumer group is required")
 )
