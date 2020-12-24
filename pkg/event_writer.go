@@ -21,14 +21,17 @@ type EventWriter interface {
 	Header() Header
 	// Write push the given encoded message into the Event-Driven ecosystem.
 	//
-	// Returns non-nil error if publisher failed to push Event or
+	// Returns number of messages published and non-nil error if publisher failed to push Event or
 	// returns ErrNotEnoughTopics if no topic was specified
-	Write(ctx context.Context, msg []byte, topics ...string) error
+	//	Sometimes, the writer might not publish messages to broker since they have passed the maximum redelivery cap
+	Write(ctx context.Context, msg []byte, topics ...string) (int, error)
 	// WriteMessage push the given message into the Event-Driven ecosystem.
 	//
-	// Returns non-nil error if publisher failed to push Event
-	//	Remember Quark uses Message's "Kind" field as topic name, so the developer must specify it
-	WriteMessage(context.Context, ...*Message) error
+	// Returns number of messages published
+	// and non-nil error if publisher failed to push Event
+	//	Remember Quark uses Message's "Kind" field as topic name, so the developer must specify it either in mentioned field or in response headers
+	//	Sometimes, the writer might not publish messages to broker since they have passed the maximum redelivery cap
+	WriteMessage(context.Context, ...*Message) (int, error)
 }
 
 type defaultEventWriter struct {
@@ -54,13 +57,14 @@ func (d *defaultEventWriter) Header() Header {
 	return d.header
 }
 
-func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...string) error {
+func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...string) (int, error) {
 	if d.publisher == nil {
-		return ErrPublisherNotImplemented
+		return 0, ErrPublisherNotImplemented
 	} else if len(topics) == 0 {
-		return ErrNotEnoughTopics
+		return 0, ErrNotEnoughTopics
 	}
 	errs := new(multierror.Error)
+	msgPublished := 0
 	for _, t := range topics {
 		log.Printf(t)
 		m := NewMessage(t, msg)
@@ -73,16 +77,19 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 			errs = multierror.Append(errs, err)
 			continue
 		}
+		msgPublished++
 	}
-	return errs.ErrorOrNil()
+	return msgPublished, errs.ErrorOrNil()
 }
 
-// TODO: Add new return value (int) to tell user how many messages were published/written
-func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message) error {
+func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message) (int, error) {
 	if d.publisher == nil {
-		return ErrPublisherNotImplemented
+		return 0, ErrPublisherNotImplemented
+	} else if len(msgs) == 0 {
+		return 0, ErrNotEnoughTopics
 	}
 	errs := new(multierror.Error)
+	msgPublished := 0
 	for _, msg := range msgs {
 		d.parseHeader(msg)
 		if msg.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
@@ -93,8 +100,9 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 			errs = multierror.Append(errs, err)
 			continue
 		}
+		msgPublished++
 	}
-	return errs.ErrorOrNil()
+	return msgPublished, errs.ErrorOrNil()
 }
 
 func (d *defaultEventWriter) parseHeader(msg *Message) {
