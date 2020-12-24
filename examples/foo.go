@@ -45,11 +45,11 @@ func main() {
 
 	// Example: Chat, communication between multiple topics
 	b.Topic("chat.0").PoolSize(4).HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
-		_ = w.Write(e.Context, []byte("hello"), "chat.1")
+		_, _ = w.Write(e.Context, []byte("hello"), "chat.1")
 		return true
 	})
 	b.Topic("chat.1").HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
-		_ = w.Write(e.Context, []byte("goodbye"), "chat.0")
+		_, _ = w.Write(e.Context, []byte("goodbye"), "chat.0")
 		return true
 	})
 
@@ -59,14 +59,14 @@ func main() {
 
 	// Example: Listen to some user trading using custom publisher provider and sending a response to multiple topics
 	b.Topic("alex.trades").Publisher(AWSPublisher{}).HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
-		_ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
+		_, _ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
 			"aws.alex.trades", "aws.analytics.trades")
 		return true
 	})
 
 	// Example: Listen to a feed failing completely (send message to DLQ)
 	b.Topic("alice.feed").PoolSize(10).HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
-		_ = w.Write(e.Context, []byte("failed to process message"), "dlq.feed")
+		_, _ = w.Write(e.Context, []byte("failed to process message"), "dlq.feed")
 		return true
 	})
 
@@ -77,9 +77,9 @@ func main() {
 				return true // avoid loops
 			}
 			e.Body.Metadata.RedeliveryCount++
-			w.Header().Set("redelivery_count", strconv.Itoa(e.Body.Metadata.RedeliveryCount))
+			w.Header().Set(pkg.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
 			msg := pkg.NewMessageFromParent(e.Body.Metadata.CorrelationId, e.Body.Kind, e.Body.Attributes)
-			_ = w.WriteMessage(e.Context, msg)
+			_, _ = w.WriteMessage(e.Context, msg)
 			// _ = w.Publisher().Publish(e.Context, e.Body) is also valid but will not write given headers
 			return true
 		})
