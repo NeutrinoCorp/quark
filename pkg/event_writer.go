@@ -14,6 +14,7 @@ import (
 //
 // Uses a Publisher to write the actual message
 type EventWriter interface {
+	injectHeader(Header)
 	// Publisher actual publisher used to push Event(s)
 	Publisher() Publisher
 	// Header Event metadata
@@ -46,6 +47,10 @@ func newEventWriter(n *node, p Publisher) EventWriter {
 		publisher: p,
 		header:    Header{},
 	}
+}
+
+func (d *defaultEventWriter) injectHeader(h Header) {
+	d.header = h
 }
 
 func (d defaultEventWriter) Publisher() Publisher {
@@ -109,7 +114,9 @@ func (d *defaultEventWriter) parseHeader(msg *Message) {
 		case HeaderMessageKind:
 			msg.Kind = v
 		case HeaderMessageCorrelationId:
-			msg.Metadata.CorrelationId = v
+			if v != "" {
+				msg.Metadata.CorrelationId = v
+			}
 		case HeaderMessageRedeliveryCount:
 			if c, err := strconv.Atoi(v); err == nil {
 				msg.Metadata.RedeliveryCount = c

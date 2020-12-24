@@ -24,6 +24,12 @@ func (k *defaultKafkaPartitionConsumer) Consume(ctx context.Context, p sarama.Pa
 		}
 		h := PopulateKafkaEventHeaders(msgConsumer)
 		h.Set(HeaderKafkaHighWaterMarkOffset, strconv.Itoa(int(p.HighWaterMarkOffset())))
+		// set up required parent data (tracing, redelivery and correlation)
+		hEv := Header{}
+		hEv.Set(HeaderSpanContext, h.Get(HeaderSpanContext))
+		hEv.Set(HeaderMessageCorrelationId, h.Get(HeaderMessageCorrelationId))
+		hEv.Set(HeaderMessageRedeliveryCount, h.Get(HeaderMessageRedeliveryCount))
+		e.injectHeader(hEv)
 		ev := &Event{
 			Context:    eventCtx,
 			Topic:      msgConsumer.Topic,
@@ -71,16 +77,31 @@ func (k *defaultKafkaConsumer) ConsumeClaim(session sarama.ConsumerGroupSession,
 			Topic:      msgConsumer.Topic,
 			Header:     h,
 			Body:       UnmarshalKafkaHeaders(msgConsumer),
+			RawValue:   msgConsumer.Value,
 			RawSession: session,
 		}
 
 		if k.worker.parent.Consumer.handler != nil {
-			if commit := k.worker.parent.Consumer.handler.ServeEvent(k.worker.parent.setDefaultEventWriter(), e); commit {
+			// set up required parent data (tracing, redelivery and correlation)
+			evWriter := k.worker.parent.setDefaultEventWriter()
+			hEv := Header{}
+			hEv.Set(HeaderSpanContext, h.Get(HeaderSpanContext))
+			hEv.Set(HeaderMessageCorrelationId, h.Get(HeaderMessageCorrelationId))
+			hEv.Set(HeaderMessageRedeliveryCount, h.Get(HeaderMessageRedeliveryCount))
+			evWriter.injectHeader(hEv)
+			if commit := k.worker.parent.Consumer.handler.ServeEvent(evWriter, e); commit {
 				session.MarkMessage(msgConsumer, "")
 			}
 		}
 		if k.worker.parent.Consumer.handlerFunc != nil {
-			if commit := k.worker.parent.Consumer.handlerFunc(k.worker.parent.setDefaultEventWriter(), e); commit {
+			// set up required parent data (tracing, redelivery and correlation)
+			evWriter := k.worker.parent.setDefaultEventWriter()
+			hEv := Header{}
+			hEv.Set(HeaderSpanContext, h.Get(HeaderSpanContext))
+			hEv.Set(HeaderMessageCorrelationId, h.Get(HeaderMessageCorrelationId))
+			hEv.Set(HeaderMessageRedeliveryCount, h.Get(HeaderMessageRedeliveryCount))
+			evWriter.injectHeader(hEv)
+			if commit := k.worker.parent.Consumer.handlerFunc(evWriter, e); commit {
 				session.MarkMessage(msgConsumer, "")
 			}
 		}

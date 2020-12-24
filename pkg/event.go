@@ -12,5 +12,6 @@ type Event struct {
 	Topic      string
 	Header     Header
 	Body       *Message
+	RawValue   []byte
 	RawSession interface{}
 }
