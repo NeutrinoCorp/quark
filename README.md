@@ -1,4 +1,4 @@
-# :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov]
+# :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Version][go-img]][go]
 Reliable Event-Driven mechanisms for reactive ecosystems written in Go using Apache Kafka and/or AWS SNS/SQS.
 
 Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/) who serve 1M+ requests per-hour, 
@@ -214,10 +214,13 @@ pinned in the [benchmarks/go.mod][] file. [↩](#anchor-versions)
 [doc-img]: https://pkg.go.dev/badge/github.com/neutrinocorp/quark
 [examples]: https://github.com/neutrinocorp/quark/tree/master/examples
 [doc]: https://pkg.go.dev/github.com/neutrinocorp/quark
-[ci-img]: https://travis-ci.com/uber-go/zap.svg?branch=master
-[ci]: https://travis-ci.com/uber-go/zap
-[cov-img]: https://codecov.io/gh/uber-go/zap/branch/master/graph/badge.svg
-[cov]: https://codecov.io/gh/uber-go/zap
-[benchmarking suite]: https://github.com/uber-go/zap/tree/master/benchmarks
-[benchmarks/go.mod]: https://github.com/uber-go/zap/blob/master/benchmarks/go.mod
+[docs]: https://github.com/neutrinocorp/quark/tree/master/docs
+[ci-img]: https://github.com/neutrinocorp/quark/workflows/Go/badge.svg?branch=master
+[ci]: https://github.com/NeutrinoCorp/quark/actions
+[go-img]: https://img.shields.io/github/go-mod/go-version/NeutrinoCorp/quark?style=square
+[go]: https://github.com/NeutrinoCorp/quark/blob/master/go.mod
+[cov-img]: https://codecov.io/gh/NeutrinoCorp/quark/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/NeutrinoCorp/quark
+[benchmarking suite]: https://github.com/neutrinocrp/quark/tree/master/benchmarks
+[benchmarks/go.mod]: https://github.com/neutrinocorp/quark/blob/master/benchmarks/go.mod
 [maintainer]: https://github.com/maestre3d
