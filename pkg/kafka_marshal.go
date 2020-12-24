@@ -61,6 +61,7 @@ func MarshalKafkaHeaders(msg *Message) []sarama.RecordHeader {
 
 func UnmarshalKafkaHeaders(msgC *sarama.ConsumerMessage) *Message {
 	msg := new(Message)
+	msg.Metadata.ExternalData = map[string]string{}
 	for _, f := range msgC.Headers {
 		switch string(f.Key) {
 		case HeaderMessageId:
