@@ -1,3 +1,3 @@
-package pkg
+package quark
 
 type AWSConfiguration struct{}

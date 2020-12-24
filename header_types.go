@@ -1,4 +1,4 @@
-package pkg
+package quark
 
 const (
 	HeaderMessageId              = "quark-message-id"

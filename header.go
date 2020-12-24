@@ -1,4 +1,4 @@
-package pkg
+package quark
 
 // Header holds relevant metadata about the Message, Consumer or Broker.
 //

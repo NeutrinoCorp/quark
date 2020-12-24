@@ -8,13 +8,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/neutrinocorp/quark"
+
 	"github.com/Shopify/sarama"
-	"github.com/neutrinocorp/quark/pkg"
 )
 
 func main() {
 	// Create broker
-	b := pkg.NewKafkaBroker(newSaramaCfg(), "localhost:9092")
+	b := quark.NewKafkaBroker(newSaramaCfg(), "localhost:9092")
 
 	b.ErrorHandler = func(ctx context.Context, err error) {
 		log.Print(err)
@@ -22,29 +23,29 @@ func main() {
 
 	// Example: Chat, communication between multiple topics
 	b.Topics("chat.0", "chat.2").Group("neutrino-group-0").PoolSize(3).MaxRetries(3).
-		HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
-			log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(pkg.HeaderMessageRedeliveryCount))
-			w.Header().Set(pkg.HeaderMessageRedeliveryCount, strconv.Itoa(1))
-			_, _ = w.Write(e.Context, []byte(e.Header.Get(pkg.HeaderKafkaValue)), "chat.1")
+			log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(quark.HeaderMessageRedeliveryCount))
+			w.Header().Set(quark.HeaderMessageRedeliveryCount, strconv.Itoa(1))
+			_, _ = w.Write(e.Context, []byte(e.Header.Get(quark.HeaderKafkaValue)), "chat.1")
 			return true
 		})
 
 	b.Topics("chat.1").Group("neutrino-group-1").PoolSize(3).MaxRetries(3).
-		HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
-			log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(pkg.HeaderMessageRedeliveryCount))
+			log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(quark.HeaderMessageRedeliveryCount))
 
 			e.Body.Metadata.RedeliveryCount += 2
-			w.Header().Set(pkg.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
+			w.Header().Set(quark.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
 
-			_, _ = w.Write(e.Context, []byte("hello"), "chat.3")
+			_, _ = w.Write(e.Context, e.RawValue, "chat.3")
 			return true
 		})
 
-	b.Topic("chat.3").HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+	b.Topic("chat.3").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 		log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
-		log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(pkg.HeaderMessageRedeliveryCount))
+		log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(quark.HeaderMessageRedeliveryCount))
 		// _, _ = w.Write(e.Context, []byte("hello"), "chat.4", "chat.5")
 		return true
 	})
@@ -53,7 +54,7 @@ func main() {
 	stop := make(chan os.Signal)
 	signal.Notify(stop, os.Interrupt)
 	go func() {
-		if err := b.ListenAndServe(); err != nil && err != pkg.ErrBrokerClosed {
+		if err := b.ListenAndServe(); err != nil && err != quark.ErrBrokerClosed {
 			log.Fatal(err)
 		}
 	}()

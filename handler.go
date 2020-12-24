@@ -1,4 +1,4 @@
-package pkg
+package quark
 
 // Handler handles any Event coming from an specific topic(s)
 //

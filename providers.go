@@ -1,4 +1,4 @@
-package pkg
+package quark
 
 const (
 	KafkaProvider    = "kafka"
