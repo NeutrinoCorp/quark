@@ -7,12 +7,17 @@ import (
 )
 
 type KafkaConfiguration struct {
-	Config                   *sarama.Config
-	ConsumerGroupHandler     sarama.ConsumerGroupHandler
-	ConsumerPartitionHandler KafkaPartitionConsumer
-	ConsumerTopic            kafkaConsumerTopicConfig
-	// Hook
-	ProducerOnSent func(ctx context.Context, message *sarama.ProducerMessage, partition int32, offset int64)
+	Config   *sarama.Config
+	Consumer kafkaConsumerConfig
+	Producer kafkaProducerConfig
+}
+
+type kafkaConsumerConfig struct {
+	GroupHandler     sarama.ConsumerGroupHandler
+	PartitionHandler KafkaPartitionConsumer
+	Topic            kafkaConsumerTopicConfig
+	// Hooks
+	OnReceived func(context.Context, *sarama.ConsumerMessage)
 }
 
 type kafkaConsumerTopicConfig struct {
@@ -20,4 +25,7 @@ type kafkaConsumerTopicConfig struct {
 	Offset    int64
 }
 
-type AWSConfiguration struct{}
+type kafkaProducerConfig struct {
+	// Hooks
+	OnSent func(ctx context.Context, message *sarama.ProducerMessage, partition int32, offset int64)
+}
