@@ -26,8 +26,8 @@ func (h NotificationHandler) ServeEvent(_ quark.EventWriter, e *quark.Event) boo
 	return true
 }
 
-func LogErrors() func(error) {
-	return func(err error) {
+func LogErrors() func(context.Context, error) {
+	return func(ctx context.Context, err error) {
 		log.Print(err)
 	}
 }
