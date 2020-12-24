@@ -78,13 +78,13 @@ func (k *kafkaWorker) startConsumerGroup(ctx context.Context) error {
 					continue
 				}
 			}
-
 			if err != nil {
 				if k.parent.Broker.ErrorHandler != nil {
 					go k.parent.Broker.ErrorHandler(ctx, err)
 				}
 				return
 			}
+			retries = 0 // restart count since problem was fixed
 		}
 	}()
 
