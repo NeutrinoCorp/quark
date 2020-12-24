@@ -8,13 +8,17 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Shopify/sarama"
+
 	"github.com/neutrinocorp/quark"
 )
 
 type AWSPublisher struct{}
 
 func (a AWSPublisher) Publish(ctx context.Context, msgs ...*quark.Message) error {
-	log.Print("publishing message to AWS")
+	for _, msg := range msgs {
+		log.Printf("publishing - message: %s", msg.Kind)
+	}
 	return nil
 }
 
@@ -36,7 +40,7 @@ func main() {
 	// BDD clause
 	// Create broker
 	b, err := quark.NewBroker(quark.KafkaProvider, quark.KafkaConfiguration{
-		Config: nil,
+		Config: newSaramaCfgFoo(),
 	})
 	if err != nil {
 		panic(err)
@@ -44,25 +48,38 @@ func main() {
 	b.Cluster = []string{"localhost:9092"}
 
 	// Example: Chat, communication between multiple topics
-	b.Topic("chat.0").PoolSize(4).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-		_, _ = w.Write(e.Context, []byte("hello"), "chat.1")
-		return true
-	})
-	b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-		_, _ = w.Write(e.Context, []byte("goodbye"), "chat.0")
-		return true
-	})
+	/*
+		responded := false
+		b.Topic("chat.0").PoolSize(4).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
+			log.Printf("topic: %s | correlation: %s", e.Topic, e.Header.Get(quark.HeaderMessageCorrelationId))
+			if !responded {
+				// _, _ = w.Write(e.Context, []byte("hello"), "chat.1")
+				responded = true // avoid loops
+			}
+			return true
+		})
+		b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
+			log.Printf("topic: %s | correlation: %s", e.Topic, e.Header.Get(quark.HeaderMessageCorrelationId))
+			if !responded {
+				// _, _ = w.Write(e.Context, []byte("goodbye"), "chat.0")
+				responded = true
+			}
+			return true
+		})*/
 
 	// Example: Listen to multiple notifications using specific resiliency configurations
-	b.Topics("bob.notifications", "alice.notifications").MaxRetries(5).RetryBackoff(time.Second * 3).
+	b.Topics("bob.notifications", "alice.notifications").Group("notifications").MaxRetries(5).RetryBackoff(time.Second * 3).
 		Handle(NotificationHandler{})
 
 	// Example: Listen to some user trading using custom publisher provider and sending a response to multiple topics
-	b.Topic("alex.trades").Publisher(AWSPublisher{}).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-		_, _ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
-			"aws.alex.trades", "aws.analytics.trades")
-		return true
-	})
+	b.Topic("alex.trades").Group("alex.trades").Publisher(AWSPublisher{}).
+		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+			_, _ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
+				"aws.alex.trades", "aws.analytics.trades")
+			return true
+		})
 
 	// Example: Listen to a feed failing completely (send message to DLQ)
 	b.Topic("alice.feed").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
@@ -71,15 +88,17 @@ func main() {
 	})
 
 	// Example: Truck GPS tracker using a custom provider and address, fail temporarily (sending message to retry queue)
-	b.Topic("retry.truck.0.gps").Provider(quark.KafkaProvider).Address("localhost:9092", "localhost:9093").
+	b.Topic("retry.truck.0.gps").Group("retry.truck.0.gps").Provider(quark.KafkaProvider).MaxRetries(3).
+		Address("localhost:9092", "localhost:9093").RetryBackoff(time.Second * 3).
 		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
+			log.Printf("topic: %s | redelivery: %d", e.Topic, e.Body.Metadata.RedeliveryCount)
 			if e.Body.Metadata.RedeliveryCount >= 3 {
 				return true // avoid loops
 			}
 			e.Body.Metadata.RedeliveryCount++
 			w.Header().Set(quark.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
-			msg := quark.NewMessageFromParent(e.Body.Metadata.CorrelationId, e.Body.Kind, e.Body.Attributes)
-			_, _ = w.WriteMessage(e.Context, msg)
+			_, _ = w.Write(e.Context, e.RawValue, e.Topic)
 			// _ = w.Publisher().Publish(e.Context, e.Body) is also valid but will not write given headers
 			return true
 		})
@@ -106,4 +125,13 @@ func main() {
 	}
 
 	log.Print(b.RunningNodes(), b.RunningWorkers()) // should be 0,0
+}
+
+func newSaramaCfgFoo() *sarama.Config {
+	config := sarama.NewConfig()
+	config.ClientID = "neutrino-sample"
+	config.Consumer.Return.Errors = true
+	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
+	return config
 }
