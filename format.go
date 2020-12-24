@@ -2,6 +2,11 @@ package quark
 
 import "fmt"
 
+const (
+	Command     = "command"
+	DomainEvent = "domain_event"
+)
+
 // FormatTopicName forms an Async API topic name
 //	format e.g. "organization.service.version.kind.entity.action"
 func FormatTopicName(organization, service, kind, entity, action string, version int) string {
