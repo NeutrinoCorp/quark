@@ -4,9 +4,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/Shopify/sarama"
+	"github.com/hashicorp/go-multierror"
 )
 
 type kafkaWorker struct {
@@ -66,8 +65,8 @@ func (k *kafkaWorker) startConsumer(ctx context.Context) error {
 	}
 	k.consumer = consumer
 
-	cPartition, err := k.consumer.ConsumePartition(k.parent.Consumer.topics[0], k.cfg.ConsumerTopic.Partition,
-		k.cfg.ConsumerTopic.Offset)
+	cPartition, err := k.consumer.ConsumePartition(k.parent.Consumer.topics[0], k.cfg.Consumer.Topic.Partition,
+		k.cfg.Consumer.Topic.Offset)
 	if err != nil {
 		return err
 	}
@@ -106,8 +105,8 @@ func (k *kafkaWorker) Close() error {
 }
 
 func (k *kafkaWorker) setDefaultConsumerGroupHandler() sarama.ConsumerGroupHandler {
-	if k.cfg.ConsumerGroupHandler != nil {
-		return k.cfg.ConsumerGroupHandler
+	if k.cfg.Consumer.GroupHandler != nil {
+		return k.cfg.Consumer.GroupHandler
 	}
 
 	return &defaultKafkaConsumer{
@@ -116,8 +115,10 @@ func (k *kafkaWorker) setDefaultConsumerGroupHandler() sarama.ConsumerGroupHandl
 }
 
 func (k *kafkaWorker) setDefaultConsumerPartitionHandler() KafkaPartitionConsumer {
-	if k.cfg.ConsumerPartitionHandler != nil {
-		return k.cfg.ConsumerPartitionHandler
+	if k.cfg.Consumer.PartitionHandler != nil {
+		return k.cfg.Consumer.PartitionHandler
 	}
-	return &defaultKafkaPartitionConsumer{}
+	return &defaultKafkaPartitionConsumer{
+		worker: k,
+	}
 }
