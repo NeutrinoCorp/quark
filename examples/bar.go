@@ -42,7 +42,7 @@ func main() {
 			return true
 		})
 
-	b.Topic("chat.3").Group("neutrino-group-2").HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
+	b.Topic("chat.3").HandleFunc(func(w pkg.EventWriter, e *pkg.Event) bool {
 		log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
 		log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(pkg.HeaderMessageRedeliveryCount))
 		// _, _ = w.Write(e.Context, []byte("hello"), "chat.4", "chat.5")

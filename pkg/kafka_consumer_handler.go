@@ -35,6 +35,7 @@ func (k *defaultKafkaPartitionConsumer) Consume(ctx context.Context, p sarama.Pa
 			Topic:      msgConsumer.Topic,
 			Header:     h,
 			Body:       UnmarshalKafkaHeaders(msgConsumer),
+			RawValue:   msgConsumer.Value,
 			RawSession: p,
 		}
 
