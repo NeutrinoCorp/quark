@@ -8,24 +8,24 @@ import (
 
 type KafkaConfiguration struct {
 	Config   *sarama.Config
-	Consumer kafkaConsumerConfig
-	Producer kafkaProducerConfig
+	Consumer KafkaConsumerConfig
+	Producer KafkaProducerConfig
 }
 
-type kafkaConsumerConfig struct {
+type KafkaConsumerConfig struct {
 	GroupHandler     sarama.ConsumerGroupHandler
 	PartitionHandler KafkaPartitionConsumer
-	Topic            kafkaConsumerTopicConfig
+	Topic            KafkaConsumerTopicConfig
 	// Hooks
 	OnReceived func(context.Context, *sarama.ConsumerMessage)
 }
 
-type kafkaConsumerTopicConfig struct {
+type KafkaConsumerTopicConfig struct {
 	Partition int32
 	Offset    int64
 }
 
-type kafkaProducerConfig struct {
+type KafkaProducerConfig struct {
 	// Hooks
 	OnSent func(ctx context.Context, message *sarama.ProducerMessage, partition int32, offset int64)
 }

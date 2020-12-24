@@ -25,8 +25,8 @@ func (a AWSPublisher) Publish(ctx context.Context, msgs ...*quark.Message) error
 type NotificationHandler struct{}
 
 func (h NotificationHandler) ServeEvent(_ quark.EventWriter, e *quark.Event) bool {
-	log.Print("received notification from " + e.Topic)
-	log.Print(e.Body)
+	log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
+	log.Printf("topic: %s | correlation: %s", e.Topic, e.Header.Get(quark.HeaderMessageCorrelationId))
 	return true
 }
 
@@ -41,6 +41,15 @@ func main() {
 	// Create broker
 	b, err := quark.NewBroker(quark.KafkaProvider, quark.KafkaConfiguration{
 		Config: newSaramaCfgFoo(),
+		Consumer: quark.KafkaConsumerConfig{
+			GroupHandler:     nil,
+			PartitionHandler: nil,
+			Topic: quark.KafkaConsumerTopicConfig{
+				Partition: 0,
+				Offset:    sarama.OffsetNewest,
+			},
+			OnReceived: nil,
+		},
 	})
 	if err != nil {
 		panic(err)
