@@ -34,8 +34,8 @@ func (d *defaultKafkaPublisher) sendMessage(ctx context.Context, p sarama.SyncPr
 	if err != nil {
 		return err
 	}
-	if d.cfg.ProducerOnSent != nil {
-		go d.cfg.ProducerOnSent(ctx, m, partition, offset)
+	if d.cfg.Producer.OnSent != nil {
+		go d.cfg.Producer.OnSent(ctx, m, partition, offset)
 	}
 
 	return nil

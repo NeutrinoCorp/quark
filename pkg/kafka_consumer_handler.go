@@ -11,12 +11,17 @@ type KafkaPartitionConsumer interface {
 	Consume(context.Context, sarama.PartitionConsumer, *Consumer, EventWriter)
 }
 
-type defaultKafkaPartitionConsumer struct{}
+type defaultKafkaPartitionConsumer struct {
+	worker *kafkaWorker
+}
 
 func (k *defaultKafkaPartitionConsumer) Consume(ctx context.Context, p sarama.PartitionConsumer, c *Consumer,
 	e EventWriter) {
 	for msgConsumer := range p.Messages() {
 		eventCtx := ctx
+		if k.worker.cfg.Consumer.OnReceived != nil {
+			k.worker.cfg.Consumer.OnReceived(eventCtx, msgConsumer)
+		}
 		h := PopulateKafkaEventHeaders(msgConsumer)
 		h.Set(HeaderKafkaHighWaterMarkOffset, strconv.Itoa(int(p.HighWaterMarkOffset())))
 		ev := &Event{
@@ -52,6 +57,10 @@ func (k *defaultKafkaConsumer) Cleanup(_ sarama.ConsumerGroupSession) error {
 func (k *defaultKafkaConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	// Note: DO NOT SEND ANY ERRORS BACK IF YOU DONT WANT TO STOP THE CONSUMER GROUP'S SESSION (All workers)
 	for msgConsumer := range claim.Messages() {
+		if k.worker.cfg.Consumer.OnReceived != nil {
+			k.worker.cfg.Consumer.OnReceived(session.Context(), msgConsumer)
+		}
+
 		eventCtx := session.Context()
 		h := PopulateKafkaEventHeaders(msgConsumer)
 		h.Set(HeaderKafkaMemberId, session.MemberID())
