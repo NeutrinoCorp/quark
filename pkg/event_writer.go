@@ -72,7 +72,7 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	for _, t := range topics {
 		m := NewMessage(t, msg)
 		d.parseHeader(m)
-		if m.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
+		if m.Metadata.RedeliveryCount > d.node.setDefaultMaxRetries() {
 			continue // avoid distributed loops (at macro scale)
 		}
 		time.Sleep(d.node.setDefaultRetryBackoff() * time.Duration(m.Metadata.RedeliveryCount))
@@ -95,7 +95,7 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 	msgPublished := 0
 	for _, msg := range msgs {
 		d.parseHeader(msg)
-		if msg.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
+		if msg.Metadata.RedeliveryCount > d.node.setDefaultMaxRetries() {
 			continue // avoid distributed loops (at macro scale)
 		}
 		time.Sleep(d.node.setDefaultRetryBackoff() * time.Duration(msg.Metadata.RedeliveryCount))

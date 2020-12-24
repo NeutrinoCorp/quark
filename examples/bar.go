@@ -35,7 +35,7 @@ func main() {
 			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
 			log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(pkg.HeaderMessageRedeliveryCount))
 
-			e.Body.Metadata.RedeliveryCount++
+			e.Body.Metadata.RedeliveryCount += 2
 			w.Header().Set(pkg.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
 
 			_, _ = w.Write(e.Context, []byte("hello"), "chat.3")
