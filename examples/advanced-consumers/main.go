@@ -40,7 +40,7 @@ func main() {
 	// BDD clause
 	// Create broker
 	b, err := quark.NewBroker(quark.KafkaProvider, quark.KafkaConfiguration{
-		Config: newSaramaCfgFoo(),
+		Config: newSaramaCfg(),
 		Consumer: quark.KafkaConsumerConfig{
 			GroupHandler:     nil,
 			PartitionHandler: nil,
@@ -136,7 +136,7 @@ func main() {
 	log.Print(b.RunningNodes(), b.RunningWorkers()) // should be 0,0
 }
 
-func newSaramaCfgFoo() *sarama.Config {
+func newSaramaCfg() *sarama.Config {
 	config := sarama.NewConfig()
 	config.ClientID = "neutrino-sample"
 	config.Consumer.Return.Errors = true
