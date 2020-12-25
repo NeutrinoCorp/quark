@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -70,7 +72,7 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, t := range topics {
-		m := NewMessage(t, msg)
+		m := NewMessage(uuid.New().String(), t, msg)
 		d.parseHeader(m)
 		if m.Metadata.RedeliveryCount > d.node.setDefaultMaxRetries() {
 			continue // avoid distributed loops (at macro scale)

@@ -2,8 +2,6 @@ package quark
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // Message an Event's body.
@@ -38,8 +36,7 @@ type metadata struct {
 	ExternalData map[string]string `json:"external_data"`
 }
 
-func NewMessage(kind string, attributes []byte) *Message {
-	id := uuid.New().String()
+func NewMessage(id, kind string, attributes []byte) *Message {
 	return &Message{
 		Id:          id,
 		Kind:        kind,
@@ -54,8 +51,7 @@ func NewMessage(kind string, attributes []byte) *Message {
 	}
 }
 
-func NewMessageFromParent(parentId, kind string, attributes []byte) *Message {
-	id := uuid.New().String()
+func NewMessageFromParent(parentId, id, kind string, attributes []byte) *Message {
 	return &Message{
 		Id:          id,
 		Kind:        kind,
