@@ -15,12 +15,12 @@ func TestFormatTopicName(t *testing.T) {
 }
 
 func BenchmarkFormatTopicName(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		b.Run("Form a valid Async API topic name", func(b *testing.B) {
-			b.ReportAllocs()
+	b.Run("Form a valid Async API topic name", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
 			_ = FormatTopicName("neutrino", "payment", DomainEvent, "user", "payed_out", 1)
-		})
-	}
+		}
+	})
 }
 
 func TestFormatQueueName(t *testing.T) {
@@ -32,10 +32,10 @@ func TestFormatQueueName(t *testing.T) {
 }
 
 func BenchmarkFormatQueueName(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		b.Run("Form a valid Async API queue name", func(b *testing.B) {
-			b.ReportAllocs()
+	b.Run("Form a valid Async API queue name", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
 			_ = FormatQueueName("payment", "organization", "increment_sales", "user_payed_out")
-		})
-	}
+		}
+	})
 }

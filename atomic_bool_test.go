@@ -21,13 +21,13 @@ func TestAtomicBool(t *testing.T) {
 }
 
 func BenchmarkAtomicBool(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		b.Run("Stress out atomicity of atomic bool", func(b *testing.B) {
-			b.ReportAllocs()
+	b.Run("Stress out atomicity of atomic bool", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
 			var bl atomicBool = 0
 			bl.setTrue()
 			bl.setFalse()
 			bl.isSet()
-		})
-	}
+		}
+	})
 }

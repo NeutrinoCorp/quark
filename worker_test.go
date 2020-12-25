@@ -42,20 +42,20 @@ func TestWorker(t *testing.T) {
 }
 
 func BenchmarkWorker(b *testing.B) {
-	br, err := NewBroker(KafkaProvider, KafkaConfiguration{})
-	if err != nil {
-		b.Error(err)
-	}
-	br.Topic("foo.1")
-	var n *node
-	for _, c := range br.EventMux.List() {
-		n = newNode(br, c)
-	}
-	for i := 0; i < b.N; i++ {
-		b.Run("New worker", func(b *testing.B) {
-			b.ReportAllocs()
+	b.Run("New worker", func(b *testing.B) {
+		b.ReportAllocs()
+		br, err := NewBroker(KafkaProvider, KafkaConfiguration{})
+		if err != nil {
+			b.Error(err)
+		}
+		br.Topic("foo.1")
+		var n *node
+		for _, c := range br.EventMux.List() {
+			n = newNode(br, c)
+		}
+		for i := 0; i < b.N; i++ {
 			w := newWorker(n)
 			_ = w.Parent().Broker.Provider
-		})
-	}
+		}
+	})
 }

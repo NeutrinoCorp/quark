@@ -26,31 +26,37 @@ func TestHeader(t *testing.T) {
 }
 
 func BenchmarkHeader(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		b.Run("Event Header data insertion", func(b *testing.B) {
-			b.ReportAllocs()
+	b.Run("Event Header data insertion", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
 			h := Header{}
 			h.Set(HeaderMessageId, "123")
-		})
-		b.Run("Event Header data removal", func(b *testing.B) {
-			b.ReportAllocs()
+		}
+	})
+	b.Run("Event Header data removal", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
 			h := Header{}
 			h.Set(HeaderMessageId, "123")
 			h.Del(HeaderMessageId)
-		})
-		b.Run("Event Header contains item", func(b *testing.B) {
-			b.ReportAllocs()
+		}
+	})
+	b.Run("Event Header contains item", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
 			h := Header{}
 			h.Set(HeaderMessageId, "123")
 			h.Contains(HeaderMessageId)
-		})
-		b.Run("Event Header data manipulation", func(b *testing.B) {
-			b.ReportAllocs()
+		}
+	})
+	b.Run("Event Header data manipulation", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
 			h := Header{}
 			h.Set(HeaderMessageId, "123")
 			h.Get(HeaderMessageId)
 			h.Contains(HeaderMessageId)
 			h.Del(HeaderMessageId)
-		})
-	}
+		}
+	})
 }
