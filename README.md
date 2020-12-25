@@ -67,10 +67,19 @@ Quark is based on _reliable mechanisms_. To make use of them, one needs to speci
 This method relies on `defaultEventWriter` as it contains preconfigured reliable mechanisms to avoid message loops and more functionalities.
 
 ```go
-b.Topic("chat.1").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  log.Print(e.Topic, e.RawValue)
-  // publish messages to given topics
-  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
+b.Topic("cosmos.payments").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+  // ... something failed in our processing
+  if e.Body.Metadata.RedeliveryCount > 3 {
+  	// executed if our message has been processed too much, send to Dead Letter Queue
+  	w.Header().Set(quark.HeaderMessageRedeliveryCount, 0)
+  	_, _ = w.Write(e.Context, e.RawValue, "dlq.cosmos.payment")
+	return true
+  }
+  
+  // publish messages to retry queue, message loop will be avoided by defaultEventWritter
+  e.Body.Metadata.RedeliveryCount++
+  w.Header().Set(quark.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
+  _, _ = w.Write(e.Context, e.RawValue, "retry.cosmos.payment")
   return true
 })
 ```
