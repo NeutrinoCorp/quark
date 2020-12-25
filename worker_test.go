@@ -31,12 +31,14 @@ func TestWorker(t *testing.T) {
 		n = newNode(b, c)
 	}
 	for _, tt := range workerTestingSuite {
-		t.Run("New worker "+tt.n, func(t *testing.T) {
+		t.Run("New worker", func(t *testing.T) {
 			n.Consumer.provider = tt.n
 			w := newWorker(n)
 			if w != nil {
 				assert.Equal(t, tt.expected, w.Parent().Consumer.provider)
+				return
 			}
+			assert.Empty(t, w)
 		})
 	}
 }
