@@ -75,7 +75,7 @@ b.Topic("chat.1").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(func(w qu
 })
 ```
 
-To conclude, after setting up all of our consumers, we must start the `Broker` to start all the requested processes.
+To conclude, after setting up all of our consumers, we must start the `Broker` up to trigger and rise all the specified `Consumer`.
 
 Dont forget to graceful shutdown as if you were shutting down an `net/http` server.
 
