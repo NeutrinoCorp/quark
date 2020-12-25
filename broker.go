@@ -5,9 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/Shopify/sarama"
+	"github.com/hashicorp/go-multierror"
 )
 
 // Broker coordinates every Event operation on the running Event-Driven application.
