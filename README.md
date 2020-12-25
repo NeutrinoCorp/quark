@@ -86,7 +86,7 @@ b.Topic("cosmos.payments").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(
 
 To conclude, after setting up all of our consumers, we must start the `Broker` up to trigger and rise all the specified `Consumer`.
 
-Dont forget to graceful shutdown as if you were shutting down an `net/http` server.
+Dont forget to graceful shutdown as if you were shutting down a `net/http` server.
 
 ```go
 // graceful shutdown
