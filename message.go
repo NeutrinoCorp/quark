@@ -47,7 +47,7 @@ func NewMessage(kind string, attributes []byte) *Message {
 		Attributes:  attributes,
 		Metadata: metadata{
 			CorrelationId:   id,
-			Host:            getLocalIP(),
+			Host:            "",
 			RedeliveryCount: 0,
 			ExternalData:    map[string]string{},
 		},
@@ -63,7 +63,7 @@ func NewMessageFromParent(parentId, kind string, attributes []byte) *Message {
 		Attributes:  attributes,
 		Metadata: metadata{
 			CorrelationId:   parentId,
-			Host:            getLocalIP(),
+			Host:            "",
 			RedeliveryCount: 0,
 			ExternalData:    map[string]string{},
 		},
