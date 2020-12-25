@@ -138,13 +138,9 @@ b.Topics("chat.0", "chat.1").Group("chat-group").HandleFunc(func(w quark.EventWr
 
 **Custom publisher per-consumer**
 
-Sometimes it might be useful to listen to topics/queues from another provider and push them to one specific provider.
-
-Say you were listening topics from Kafka but you want to publish the output into AWS SNS.
+Say you were listening topics from Kafka, yet you want to publish the output into AWS SNS instead Kafka (specified in the global configuration).
 
 The following example demostrates how to tackle the previous scenario with Quark.
-
-In addition, the `AWSPublisher` is just an struct implementing `Publisher` interface.
 
 Therefore, the use of `Group` is crucial here since `Partition Consumer` is treated as single unit of processing and it would publish the message N-times (the pool size since `Consumer` workers are running in parallel).
 
