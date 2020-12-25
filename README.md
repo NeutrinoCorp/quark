@@ -108,7 +108,7 @@ log.Print(b.RunningNodes(), b.RunningWorkers()) // should be 0,0
 
 One might want to take advantage of specific features like _Apache Kafka's_ `Consumer Group` as this might help to process messages one-at-the-time.
 
-Setting up this is also pretty straight foward using the default `mux/router` by setting the `Group` attribute.
+This can be done using the default `mux` by setting the `Group` attribute.
 
 By default, Quark uses `Partition Consumer` when using Apache Kafka.
 
@@ -121,7 +121,7 @@ b.Topic("chat.1").Group("awesome-group").HandleFunc(func(w quark.EventWriter, e 
 })
 ```
 
-**Fanning-out messages/queues into a single consumer**
+**Fanning-in messages/queues into a single consumer**
 
 The following example demostrates how to do the current case using the `mux` and the `Topics` function.
 
