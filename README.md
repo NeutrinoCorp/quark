@@ -1,5 +1,5 @@
 # :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Version][go-img]][go]
-Reliable Event-Driven mechanisms for reactive ecosystems written in Go using Apache Kafka and/or AWS SNS/SQS.
+Reliable Event-Driven mechanisms for reactive ecosystems written in Go.
 
 Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/) who serve 1M+ requests per-hour, 
 Quark offers a fine-tuned set of tools to ease overall complexity.
@@ -10,7 +10,7 @@ Furthermore, `Quark` stores specific data _(e.g. event id, correlation id, span 
 
 Therefore, `Quark` lets developers take advantage of those mechanisms with its default configuration and a `gorilla/mux`-like router/mux to keep them in ease and get befenits without complex configurations and handling. You can either choose use _global configurations_ specified in the broker or use an _specific configuration_ for an specific consumer.
 
-_We will be adding more implementations such as RabbitMQ and NATS in a near future._
+_We currently offer Apache Kafka and AWS SNS/SQS implementations, yet we will be adding more implementations such as RabbitMQ and NATS in a near future._
 
 ## Installation
 
@@ -24,7 +24,7 @@ Before we set up our consumers, we must define our `Broker` and its required con
 
 The following example demostrates how to set up an _Apache Kafka_ `Broker` with an error handler (hook).
 
-_When using Apache Kafka, `sarama` package is required as we rely on its mechanisms._
+_When using Apache Kafka, `Shopify/sarama` package is required as we rely on its mechanisms._
 
 ```go
 // Create broker
@@ -38,7 +38,7 @@ b.ErrorHandler = func(ctx context.Context, err error) {
 Quark is very straight foward as is based on the `net/http` and `gorilla/mux` packages.
 This example demostrates how to listen to an asynchronous topic using the `Topic` function.
 
-If no pool-size was specified, `Quark` will set it to 5 `workers` per-consumer node.
+If no pool-size was specified, `Quark` will set up to 5 `workers` per-consumer node.
 
 ```go
 b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
@@ -51,7 +51,7 @@ b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 
 Quark parallelize consumers tasks into a pool of `workers` using goroutines and executes graceful shutdown by default. 
 
-The pool size could be defined by the user with a single attribute.
+The pool size can be defined by the user with a `PoolSize` attribute.
 
 ```go
 b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
@@ -62,9 +62,9 @@ b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Eve
 })
 ```
 
-Quark is based on _reliable mechanisms_. To make use of them, you just need to set it on either the `Broker` or in an specific topic.
+Quark is based on _reliable mechanisms_. To make use of them, one needs to specify on either the `Broker` or on an specific topic.
 
-This method relies on `defaultEventWriter` as it contains the preconfigured reliable mechanisms to avoid message loops and many more things.
+This method relies on `defaultEventWriter` as it contains preconfigured reliable mechanisms to avoid message loops and more functionalities.
 
 ```go
 b.Topic("chat.1").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
@@ -73,63 +73,6 @@ b.Topic("chat.1").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(func(w qu
   _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
   return true
 })
-```
-
-Sometimes, one might want to take advantage of specific features like _Apache Kafka's_ `Consumer Group`. This might help to process messages one-at-the-time.
-
-Setting up this is also pretty straight foward using the default `mux/router` by setting the `Group` attribute.
-
-By default, Quark uses `Partition Consumer` when using Apache Kafka.
-
-```go
-b.Topic("chat.1").Group("awesome-group").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  log.Print(e.Topic, e.RawValue)
-  // publish messages to given topics
-  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
-  return true
-})
-```
-
-There are times where we want to fan-in messages into a single processor/`Consumer`, this can be done using Quark too.
-
-The following example demostrates how to do this using just the `mux/router` and the `Topics` function.
-
-_When fan-in is configured, the `Consumer` must be inside a `Group`_
-
-```go
-b.Topics("chat.0", "chat.1").Group("chat-group").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  log.Print(e.Topic, e.RawValue)
-  // publish messages to given topics
-  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
-  return true
-})
-```
-
-Sometimes it might be useful to listen to topics/queues from another system and push them to our specific infrastructure.
-
-Quark lets users to publish to different providers and this is how you can do that.
-
-In addition, the `AWSPublisher` is just an struct implementing `Publisher` interface.
-Also, the use of `Group` here is crucial since `Partition Consumer` would publish the message multiple times since every `Consumer` worker is reading from our infrastructure in parallel.
-
-```go
-type AWSPublisher struct{}
-
-func (a AWSPublisher) Publish(ctx context.Context, msgs ...*quark.Message) error {
-	for _, msg := range msgs {
-		log.Printf("publishing - message: %s", msg.Kind)
-	}
-	return nil
-}
-
-// ...
-
-b.Topic("alex.trades").Group("alex.trades").Publisher(AWSPublisher{}).
-  HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-    _, _ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
-      "aws.alex.trades", "aws.analytics.trades")
-    return true
-  })
 ```
 
 To conclude, after setting up all of our consumers, we must start the `Broker` to start all the requested processes.
@@ -157,6 +100,72 @@ if err = b.Shutdown(ctx); err != nil {
 }
 
 log.Print(b.RunningNodes(), b.RunningWorkers()) // should be 0,0
+```
+
+### Advanced techniques
+
+**Grouping consumer nodes**
+
+One might want to take advantage of specific features like _Apache Kafka's_ `Consumer Group` as this might help to process messages one-at-the-time.
+
+Setting up this is also pretty straight foward using the default `mux/router` by setting the `Group` attribute.
+
+By default, Quark uses `Partition Consumer` when using Apache Kafka.
+
+```go
+b.Topic("chat.1").Group("awesome-group").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+  log.Print(e.Topic, e.RawValue)
+  // publish messages to given topics
+  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
+  return true
+})
+```
+
+**Fanning-out messages/queues into a single consumer**
+
+The following example demostrates how to do the current case using the `mux` and the `Topics` function.
+
+_When fan-in is configured, the `Consumer` must be inside a `Group`_
+
+```go
+b.Topics("chat.0", "chat.1").Group("chat-group").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+  log.Print(e.Topic, e.RawValue)
+  // publish messages to given topics
+  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
+  return true
+})
+```
+
+**Custom publisher per-consumer**
+
+Sometimes it might be useful to listen to topics/queues from another provider and push them to one specific provider.
+
+Say you were listening topics from Kafka but you want to publish the output into AWS SNS.
+
+The following example demostrates how to tackle the previous scenario with Quark.
+
+In addition, the `AWSPublisher` is just an struct implementing `Publisher` interface.
+
+Therefore, the use of `Group` is crucial here since `Partition Consumer` is treated as single unit of processing and it would publish the message N-times (the pool size since `Consumer` workers are running in parallel).
+
+```go
+type AWSPublisher struct{}
+
+func (a AWSPublisher) Publish(ctx context.Context, msgs ...*quark.Message) error {
+	for _, msg := range msgs {
+		log.Printf("publishing - message: %s", msg.Kind)
+	}
+	return nil
+}
+
+// ...
+
+b.Topic("alex.trades").Group("alex.trades").Publisher(AWSPublisher{}).
+  HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+    _, _ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
+      "aws.alex.trades", "aws.analytics.trades")
+    return true
+  })
 ```
 
 See the [documentation][doc], [examples][examples] and [FAQ](FAQ.md) for more details.
