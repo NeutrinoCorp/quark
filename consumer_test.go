@@ -1,6 +1,7 @@
 package quark
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -90,7 +91,7 @@ func TestConsumer_GetProviderConfig(t *testing.T) {
 		c := Consumer{}
 		cfg := &KafkaConfiguration{}
 		c.ProviderConfig(cfg)
-		assert.Same(t, cfg, c.providerConfig)
+		assert.Same(t, cfg, c.GetProviderConfig())
 	})
 }
 
@@ -109,6 +110,40 @@ func TestConsumer_HandleFunc(t *testing.T) {
 		h := func(EventWriter, *Event) bool { return true }
 		c.HandleFunc(h)
 		assert.NotEmpty(t, c.handlerFunc)
+	})
+}
+
+var consumerTopicStringTestingSuite = []struct {
+	topics   []string
+	expected string
+}{
+	{[]string{"chat.0", "chat.1", "chat.2"}, "chat.0,chat.1,chat.2"},
+	{[]string{"chat.0"}, "chat.0"},
+	{[]string{}, ""},
+}
+
+func TestConsumer_TopicString(t *testing.T) {
+	for _, tt := range consumerTopicStringTestingSuite {
+		t.Run("Consumer topics string", func(t *testing.T) {
+			c := Consumer{}
+			c.Topics(tt.topics...)
+			assert.Equal(t, tt.expected, c.TopicString())
+		})
+	}
+}
+
+type stubPublisher struct{}
+
+func (a stubPublisher) Publish(context.Context, ...*Message) error {
+	return nil
+}
+
+func TestConsumer_Publisher(t *testing.T) {
+	t.Run("Consumer add publisher", func(t *testing.T) {
+		c := Consumer{}
+		p := new(stubPublisher)
+		c.Publisher(p)
+		assert.Equal(t, p, c.publisher)
 	})
 }
 
