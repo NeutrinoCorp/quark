@@ -11,6 +11,7 @@ var workerTestingSuite = []struct {
 	cfg      interface{}
 	expected string // expected result
 }{
+	{"", nil, ""},
 	{"KaFkA", nil, ""},
 	{"Apache Kafka", KafkaConfiguration{}, ""},
 	{"kafka", AWSConfiguration{}, ""},
@@ -25,9 +26,7 @@ func TestWorker(t *testing.T) {
 	for _, tt := range workerTestingSuite {
 		t.Run("New worker", func(t *testing.T) {
 			b, err := NewBroker(KafkaProvider, KafkaConfiguration{})
-			if err != nil {
-				t.Fatal(err.Error())
-			}
+			assert.Nil(t, err)
 			b.Topic("foo.1")
 			var n *node
 			for _, c := range b.EventMux.List() {
@@ -36,6 +35,9 @@ func TestWorker(t *testing.T) {
 			assert.NotNil(t, n)
 			n.Consumer.Provider(tt.n)
 			n.Consumer.ProviderConfig(tt.cfg)
+			// bypass broker Insurance
+			n.Broker.Provider = tt.n
+			n.Broker.ProviderConfig = tt.cfg
 			w := newWorker(n)
 			if w != nil {
 				assert.Equal(t, tt.expected, w.Parent().Consumer.provider)
