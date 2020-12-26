@@ -6,7 +6,7 @@ import (
 	"github.com/Shopify/sarama"
 )
 
-func PopulateKafkaEventHeaders(msg *sarama.ConsumerMessage) Header {
+func NewKafkaHeader(msg *sarama.ConsumerMessage) Header {
 	h := Header{}
 	h.Set(HeaderKafkaPartition, strconv.Itoa(int(msg.Partition)))
 	h.Set(HeaderKafkaOffset, strconv.Itoa(int(msg.Offset)))

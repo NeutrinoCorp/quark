@@ -22,7 +22,7 @@ func (k *defaultKafkaPartitionConsumer) Consume(ctx context.Context, p sarama.Pa
 		if k.worker.cfg.Consumer.OnReceived != nil {
 			k.worker.cfg.Consumer.OnReceived(eventCtx, msgConsumer)
 		}
-		h := PopulateKafkaEventHeaders(msgConsumer)
+		h := NewKafkaHeader(msgConsumer)
 		h.Set(HeaderKafkaHighWaterMarkOffset, strconv.Itoa(int(p.HighWaterMarkOffset())))
 		// set up required parent data (tracing, redelivery and correlation)
 		hEv := Header{}
@@ -69,7 +69,7 @@ func (k *defaultKafkaConsumer) ConsumeClaim(session sarama.ConsumerGroupSession,
 		}
 
 		eventCtx := session.Context()
-		h := PopulateKafkaEventHeaders(msgConsumer)
+		h := NewKafkaHeader(msgConsumer)
 		h.Set(HeaderKafkaMemberId, session.MemberID())
 		h.Set(HeaderKafkaGenerationId, strconv.Itoa(int(session.GenerationID())))
 		h.Set(HeaderConsumerGroup, k.worker.parent.Consumer.group)
