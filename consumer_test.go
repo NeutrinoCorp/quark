@@ -2,9 +2,16 @@ package quark
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+type stubHandler struct{}
+
+func (h stubHandler) ServeEvent(EventWriter, *Event) bool {
+	return true
+}
 
 var consumerAddTopicsTestingSuite = []struct {
 	n        []string // input
@@ -36,6 +43,57 @@ func TestConsumer(t *testing.T) {
 		assert.Equal(t, KafkaConfiguration{}, c.providerConfig.(KafkaConfiguration))
 		c.Address("localhost")
 		assert.Contains(t, c.cluster, "localhost")
+	})
+}
+
+func TestConsumer_Group(t *testing.T) {
+	t.Run("Consumer group mutation", func(t *testing.T) {
+		c := Consumer{}
+		c.Group("foo-group")
+		assert.Equal(t, "foo-group", c.group)
+	})
+}
+
+func TestConsumer_MaxRetries(t *testing.T) {
+	t.Run("Consumer max retries mutation", func(t *testing.T) {
+		c := Consumer{}
+		c.MaxRetries(5)
+		assert.Equal(t, 5, c.maxRetries)
+	})
+}
+
+func TestConsumer_RetryBackoff(t *testing.T) {
+	t.Run("Consumer retry backoff mutation", func(t *testing.T) {
+		c := Consumer{}
+		c.RetryBackoff(time.Second * 5)
+		assert.Equal(t, time.Second*5, c.retryBackoff)
+	})
+}
+
+func TestConsumer_GetProviderConfig(t *testing.T) {
+	t.Run("Consumer provider config mutation", func(t *testing.T) {
+		c := Consumer{}
+		cfg := &KafkaConfiguration{}
+		c.ProviderConfig(cfg)
+		assert.Same(t, cfg, c.providerConfig)
+	})
+}
+
+func TestConsumer_Handle(t *testing.T) {
+	t.Run("Consumer handle mutation", func(t *testing.T) {
+		c := Consumer{}
+		h := &stubHandler{}
+		c.Handle(h)
+		assert.Same(t, h, c.handler)
+	})
+}
+
+func TestConsumer_HandleFunc(t *testing.T) {
+	t.Run("Consumer handle function mutation", func(t *testing.T) {
+		c := Consumer{}
+		h := func(EventWriter, *Event) bool { return true }
+		c.HandleFunc(h)
+		assert.NotEmpty(t, c.handlerFunc)
 	})
 }
 

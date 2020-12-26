@@ -61,3 +61,34 @@ func BenchmarkNewMessageFromParent(b *testing.B) {
 		}
 	})
 }
+
+func TestMessage_Encode(t *testing.T) {
+	t.Run("Message encode", func(t *testing.T) {
+		attr := []byte("hello, foo")
+		msg := NewMessage("1", DomainEvent, attr)
+		attrMsg, err := msg.Encode()
+		if assert.Nil(t, err) {
+			assert.Equal(t, attr, attrMsg)
+		}
+	})
+}
+
+var messageLengthTestingSuite = []struct {
+	n        string
+	expected int
+}{
+	{"hello", 5},
+	{"hello there", 11},
+	{"foo", 3},
+	{"", 0},
+}
+
+func TestMessage_Length(t *testing.T) {
+	for _, tt := range messageLengthTestingSuite {
+		t.Run("Message length", func(t *testing.T) {
+			attr := []byte(tt.n)
+			msg := NewMessage("1", Command, attr)
+			assert.Equal(t, tt.expected, msg.Length())
+		})
+	}
+}

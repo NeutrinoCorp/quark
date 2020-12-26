@@ -78,8 +78,8 @@ func (c *Consumer) ProviderConfig(cfg interface{}) *Consumer {
 	return c
 }
 
-// Config returns a custom provider configuration (e.g. sarama config, aws credentials)
-func (c *Consumer) Config() interface{} {
+// GetProviderConfig returns a custom provider configuration (e.g. sarama config, aws credentials)
+func (c *Consumer) GetProviderConfig() interface{} {
 	return c.providerConfig
 }
 
