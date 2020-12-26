@@ -22,75 +22,83 @@ type EventMux interface {
 }
 
 type defaultMux struct {
-	consumers sync.Map
+	consumers map[string]*Consumer
+	mu        sync.RWMutex
 }
 
 // NewMux allocates and returns a default EventMux
 func NewMux() EventMux {
-	return new(defaultMux)
+	return &defaultMux{
+		consumers: map[string]*Consumer{},
+		mu:        sync.RWMutex{},
+	}
 }
 
 func (b *defaultMux) Topic(topic string) *Consumer {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	c := new(Consumer)
 	if topic == "" {
 		return c
 	}
 	c.Topic(topic)
-	b.consumers.Store(topic, c)
+	b.consumers[topic] = c
 	return c
 }
 
 func (b *defaultMux) Topics(topics ...string) *Consumer {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	c := new(Consumer)
 	if len(topics) == 0 {
 		return c
 	}
 	c.Topics(topics...)
-	b.consumers.Store(c.TopicString(), c)
-	/*
-		Adds a worker pool per-topic when fan-in is required, maybe it is not a great idea to use this
-		for _, t := range topics {
-			b.consumers.Store(t, c)
-		}*/
+	// b.consumers.Store(c.TopicString(), c) -  previous version, attached many topics into a single unit of work
+	// Adds a worker pool per-topic
+	for _, t := range topics {
+		b.consumers[t] = c
+	}
 	return c
 }
 
 func (b *defaultMux) Add(c *Consumer) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	if c == nil {
 		return // ignore nil-refs
 	}
 	for _, t := range c.topics {
-		b.consumers.Store(t, c)
+		b.consumers[t] = c
 	}
 }
 
 func (b *defaultMux) Get(topic string) *Consumer {
-	cSync, ok := b.consumers.Load(topic)
-	if c, okC := cSync.(*Consumer); ok && okC {
-		return c
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	c, ok := b.consumers[topic]
+	if !ok {
+		return nil
 	}
 
-	return nil
+	return c
 }
 
 func (b *defaultMux) Del(topic string) {
-	b.consumers.Delete(topic)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	delete(b.consumers, topic)
 }
 
 func (b *defaultMux) Contains(topic string) bool {
-	_, ok := b.consumers.Load(topic)
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	_, ok := b.consumers[topic]
 	return ok
 }
 
 func (b *defaultMux) List() map[string]*Consumer {
-	list := map[string]*Consumer{}
-	b.consumers.Range(func(key, value interface{}) bool {
-		k, okK := key.(string)
-		v, okV := value.(*Consumer)
-		if okK && okV {
-			list[k] = v
-		}
-		return true
-	})
-	return list
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.consumers
 }
