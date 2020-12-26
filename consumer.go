@@ -37,6 +37,9 @@ type Consumer struct {
 // Topic A Broker will use this topic to subscribe the Consumer
 //	This field can be also used as Queue
 func (c *Consumer) Topic(topic string) *Consumer {
+	if topic == "" {
+		return c
+	}
 	c.topics = append(c.topics, topic)
 	return c
 }
@@ -44,6 +47,9 @@ func (c *Consumer) Topic(topic string) *Consumer {
 // Topics A Broker will use these topics to subscribe the Consumer to fan-in processing
 //	These fields can be also used as Queues
 func (c *Consumer) Topics(topics ...string) *Consumer {
+	if len(topics) == 0 {
+		return c
+	}
 	c.topics = append(c.topics, topics...)
 	return c
 }

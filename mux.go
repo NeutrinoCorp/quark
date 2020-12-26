@@ -32,6 +32,9 @@ func NewMux() EventMux {
 
 func (b *defaultMux) Topic(topic string) *Consumer {
 	c := new(Consumer)
+	if topic == "" {
+		return c
+	}
 	c.Topic(topic)
 	b.consumers.Store(topic, c)
 	return c
@@ -39,6 +42,9 @@ func (b *defaultMux) Topic(topic string) *Consumer {
 
 func (b *defaultMux) Topics(topics ...string) *Consumer {
 	c := new(Consumer)
+	if len(topics) == 0 {
+		return c
+	}
 	c.Topics(topics...)
 	b.consumers.Store(c.TopicString(), c)
 	/*
@@ -50,6 +56,9 @@ func (b *defaultMux) Topics(topics ...string) *Consumer {
 }
 
 func (b *defaultMux) Add(c *Consumer) {
+	if c == nil {
+		return // ignore nil-refs
+	}
 	for _, t := range c.topics {
 		b.consumers.Store(t, c)
 	}

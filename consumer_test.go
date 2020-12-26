@@ -23,11 +23,26 @@ var consumerAddTopicsTestingSuite = []struct {
 	{[]string{"chat.0", "chat.1", "chat.2"}, 3},
 }
 
+var consumerAddTopicTestingSuite = []struct {
+	t        string // input
+	expected int    // expected result (length)
+}{
+	{"chat.0", 1},
+	{"", 0},
+}
+
 func TestConsumer(t *testing.T) {
 	t.Run("Consumer add topics", func(t *testing.T) {
 		for _, tt := range consumerAddTopicsTestingSuite {
 			c := Consumer{}
 			c.Topics(tt.n...)
+			assert.Equal(t, tt.expected, len(c.topics))
+		}
+	})
+	t.Run("Consumer add topic", func(t *testing.T) {
+		for _, tt := range consumerAddTopicTestingSuite {
+			c := Consumer{}
+			c.Topic(tt.t)
 			assert.Equal(t, tt.expected, len(c.topics))
 		}
 	})
