@@ -3,7 +3,6 @@ package quark
 import (
 	"context"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -29,7 +28,6 @@ func (k *kafkaWorker) Parent() *node {
 }
 
 func (k *kafkaWorker) StartJob(ctx context.Context) error {
-	log.Printf("topics: %v | worker_id: %d | provider: %s", k.parent.Consumer.topics, k.id, k.parent.setDefaultProvider())
 	if err := k.ensureGroup(); err != nil {
 		return err
 	} else if len(k.parent.Consumer.topics) > 1 || k.parent.Consumer.group != "" {
@@ -127,19 +125,16 @@ func (k *kafkaWorker) startConsumer(ctx context.Context) error {
 func (k *kafkaWorker) Close() error {
 	errs := new(multierror.Error)
 	if k.group != nil {
-		log.Printf("topics: %v | worker_id: %d | closing worker", k.parent.Consumer.topics, k.id)
 		if err := k.group.Close(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
 	if k.consumer != nil {
-		log.Printf("topics: %v | worker_id: %d | closing worker", k.parent.Consumer.topics, k.id)
 		if err := k.consumer.Close(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
 	if k.partitioner != nil {
-		log.Printf("topics: %v | worker_id: %d | closing worker", k.parent.Consumer.topics, k.id)
 		if err := k.partitioner.Close(); err != nil {
 			errs = multierror.Append(errs, err)
 		}

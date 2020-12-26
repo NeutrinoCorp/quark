@@ -2,7 +2,6 @@ package quark
 
 import (
 	"context"
-	"log"
 )
 
 type awsWorker struct {
@@ -20,11 +19,9 @@ func (a *awsWorker) Parent() *node {
 }
 
 func (a *awsWorker) StartJob(ctx context.Context) error {
-	log.Print(a.parent.Consumer.topics, a.parent.setDefaultProvider())
 	return nil
 }
 
 func (a *awsWorker) Close() error {
-	log.Print(a.parent.Consumer.topics, "closing worker")
 	return nil
 }
