@@ -32,6 +32,27 @@ func TestDefaultMux_Add(t *testing.T) {
 	}
 }
 
+var defaultMuxTopicTestingSuite = []struct {
+	t string
+}{
+	{"bob.notification"},
+	{""},
+}
+
+func TestDefaultMux_Topic(t *testing.T) {
+	for _, tt := range defaultMuxTopicTestingSuite {
+		t.Run("Default mux add topic", func(t *testing.T) {
+			mux := NewMux()
+			mux.Topic(tt.t)
+			if tt.t == "" {
+				assert.Nil(t, mux.Get(tt.t))
+				return
+			}
+			assert.NotNil(t, mux.Get(tt.t))
+		})
+	}
+}
+
 var defaultMuxContainsTestingSuite = []struct {
 	t        []string
 	f        string
