@@ -31,6 +31,11 @@ func MarshalKafkaMessage(msg *Message) *sarama.ProducerMessage {
 
 func MarshalKafkaHeaders(msg *Message) []sarama.RecordHeader {
 	h := make([]sarama.RecordHeader, 0)
+	publishTime, err := msg.PublishTime.MarshalBinary()
+	if err != nil {
+		publishTime = []byte(msg.PublishTime.String())
+	}
+
 	h = append(h, sarama.RecordHeader{
 		Key:   []byte(HeaderMessageId),
 		Value: []byte(msg.Id),
@@ -39,7 +44,7 @@ func MarshalKafkaHeaders(msg *Message) []sarama.RecordHeader {
 		Value: []byte(msg.Kind),
 	}, sarama.RecordHeader{
 		Key:   []byte(HeaderMessagePublishTime),
-		Value: []byte(msg.PublishTime.String()),
+		Value: publishTime,
 	}, sarama.RecordHeader{
 		Key:   []byte(HeaderMessageCorrelationId),
 		Value: []byte(msg.Metadata.CorrelationId),
@@ -72,6 +77,7 @@ func UnmarshalKafkaHeaders(msgC *sarama.ConsumerMessage) *Message {
 			t := time.Time{}
 			if err := t.UnmarshalBinary(f.Value); err == nil {
 				msg.PublishTime = t
+				continue
 			}
 			msg.PublishTime = time.Time{} // set default empty value
 		case HeaderMessageAttributes:
