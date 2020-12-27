@@ -8,6 +8,7 @@ const (
 	HeaderMessageCorrelationId   = "quark-metadata-correlation-id"
 	HeaderMessageHost            = "quark-metadata-host"
 	HeaderMessageRedeliveryCount = "quark-metadata-redelivery-count"
+	HeaderMessageError           = "quark-metadata-error"
 
 	HeaderConsumerGroup = "quark-consumer-group"
 	HeaderSpanContext   = "quark-span-context"
