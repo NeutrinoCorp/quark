@@ -120,15 +120,17 @@ func (b *Broker) Serve() error {
 }
 
 func (b *Broker) startNodes(ctx context.Context) error {
-	for _, c := range b.EventMux.List() {
-		nodeCtx := ctx
-		n := newNode(b, c)
-		if err := n.Consume(nodeCtx); err != nil {
-			return err
+	for _, consumers := range b.EventMux.List() {
+		for _, c := range consumers {
+			nodeCtx := ctx
+			n := newNode(b, c)
+			if err := n.Consume(nodeCtx); err != nil {
+				return err
+			}
+			b.nodes[b.runningNodes] = n
+			b.runningWorkers += n.runningWorkers.Length()
+			b.runningNodes++
 		}
-		b.nodes[b.runningNodes] = n
-		b.runningWorkers += n.runningWorkers.Length()
-		b.runningNodes++
 	}
 	return nil
 }

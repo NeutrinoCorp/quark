@@ -29,8 +29,10 @@ func TestWorker(t *testing.T) {
 			assert.Nil(t, err)
 			b.Topic("foo.1")
 			var n *node
-			for _, c := range b.EventMux.List() {
-				n = newNode(b, c)
+			for _, consumers := range b.EventMux.List() {
+				for _, c := range consumers {
+					n = newNode(b, c)
+				}
 			}
 			assert.NotNil(t, n)
 			n.Consumer.Provider(tt.n)
@@ -57,8 +59,10 @@ func BenchmarkWorker(b *testing.B) {
 		}
 		br.Topic("foo.1")
 		var n *node
-		for _, c := range br.EventMux.List() {
-			n = newNode(br, c)
+		for _, consumers := range br.EventMux.List() {
+			for _, c := range consumers {
+				n = newNode(br, c)
+			}
 		}
 		for i := 0; i < b.N; i++ {
 			w := newWorker(n)

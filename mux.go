@@ -12,24 +12,24 @@ type EventMux interface {
 	// Add manually adds a consumer
 	Add(c *Consumer)
 	// Get returns an specific consumer by the given topic
-	Get(topic string) *Consumer
+	Get(topic string) []*Consumer
 	// Del removes an specific topic from the local registry
 	Del(topic string)
 	// Contains verifies if the given topic exists in the local registry
 	Contains(topic string) bool
 	// List returns the local registry
-	List() map[string]*Consumer
+	List() map[string][]*Consumer
 }
 
 type defaultMux struct {
-	consumers map[string]*Consumer
+	consumers map[string][]*Consumer
 	mu        sync.RWMutex
 }
 
 // NewMux allocates and returns a default EventMux
 func NewMux() EventMux {
 	return &defaultMux{
-		consumers: map[string]*Consumer{},
+		consumers: map[string][]*Consumer{},
 		mu:        sync.RWMutex{},
 	}
 }
@@ -42,7 +42,7 @@ func (b *defaultMux) Topic(topic string) *Consumer {
 		return c
 	}
 	c.Topic(topic)
-	b.consumers[topic] = c
+	b.consumers[topic] = append(b.consumers[topic], c)
 	return c
 }
 
@@ -57,7 +57,7 @@ func (b *defaultMux) Topics(topics ...string) *Consumer {
 	// b.consumers.Store(c.TopicString(), c) -  previous version, attached many topics into a single unit of work
 	// Adds a worker pool per-topic
 	for _, t := range topics {
-		b.consumers[t] = c
+		b.consumers[t] = append(b.consumers[t], c)
 	}
 	return c
 }
@@ -69,11 +69,11 @@ func (b *defaultMux) Add(c *Consumer) {
 		return // ignore nil-refs
 	}
 	for _, t := range c.topics {
-		b.consumers[t] = c
+		b.consumers[t] = append(b.consumers[t], c)
 	}
 }
 
-func (b *defaultMux) Get(topic string) *Consumer {
+func (b *defaultMux) Get(topic string) []*Consumer {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	c, ok := b.consumers[topic]
@@ -97,7 +97,7 @@ func (b *defaultMux) Contains(topic string) bool {
 	return ok
 }
 
-func (b *defaultMux) List() map[string]*Consumer {
+func (b *defaultMux) List() map[string][]*Consumer {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.consumers
