@@ -54,7 +54,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	b.Cluster = []string{"localhost:9092"}
+	b.Cluster = []string{"localhost:19092", "localhost:29092", "localhost:39092"}
 
 	// Example: Listen to multiple notifications using specific resiliency configurations
 	b.Topics("bob.notifications", "alice.notifications").Group("notifications").MaxRetries(5).RetryBackoff(time.Second * 3).

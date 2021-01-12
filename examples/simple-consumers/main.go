@@ -15,7 +15,7 @@ import (
 
 func main() {
 	// Create broker
-	b := quark.NewKafkaBroker(newSaramaCfg(), "localhost:9092")
+	b := quark.NewKafkaBroker(newSaramaCfg(), "localhost:19092", "localhost:29092", "localhost:39092")
 
 	b.ErrorHandler = func(ctx context.Context, err error) {
 		log.Print(err)
