@@ -191,7 +191,7 @@ This library is currently maintained by
 
 ## Development Status: Alpha
 
-All APIs are under development, no breaking changes will be made in the 1.x series
+All APIs are under development, breaking changes will be made in the 0.x.x series
 of releases. Users of semver-aware dependency management systems should pin
 quark to `^1`.
 
