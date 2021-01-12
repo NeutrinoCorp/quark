@@ -5,9 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/hashicorp/go-multierror"
+	"github.com/jpillora/backoff"
 )
 
 // EventWriter works as an Event response writer.
@@ -40,6 +39,7 @@ type defaultEventWriter struct {
 	node      *node
 	publisher Publisher
 	header    Header
+	backoff   *backoff.Backoff
 }
 
 // newEventWriter allocates and creates a default EventWriter
@@ -48,6 +48,12 @@ func newEventWriter(n *node, p Publisher) EventWriter {
 		node:      n,
 		publisher: p,
 		header:    Header{},
+		backoff: &backoff.Backoff{
+			Factor: 2,
+			Jitter: true,
+			Min:    n.setDefaultRetryBackoff(),
+			Max:    n.setDefaultRetryBackoff() * 2,
+		},
 	}
 }
 
@@ -72,12 +78,12 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, t := range topics {
-		m := NewMessage(uuid.New().String(), t, msg)
-		d.parseHeader(m)
+		m := NewMessage(d.node.Broker.setDefaultMessageIdGenerator()(), t, msg)
+		d.marshalMessage(m)
 		if m.Metadata.RedeliveryCount > d.node.setDefaultMaxRetries() {
 			continue // avoid distributed loops (at macro scale)
 		}
-		time.Sleep(d.node.setDefaultRetryBackoff() * time.Duration(m.Metadata.RedeliveryCount))
+		time.Sleep(d.backoff.ForAttempt(float64(m.Metadata.RedeliveryCount)))
 		if err := d.publisher.Publish(ctx, m); err != nil {
 			errs = multierror.Append(errs, err)
 			continue
@@ -96,11 +102,11 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, msg := range msgs {
-		d.parseHeader(msg)
+		d.marshalMessage(msg)
 		if msg.Metadata.RedeliveryCount > d.node.setDefaultMaxRetries() {
 			continue // avoid distributed loops (at macro scale)
 		}
-		time.Sleep(d.node.setDefaultRetryBackoff() * time.Duration(msg.Metadata.RedeliveryCount))
+		time.Sleep(d.backoff.ForAttempt(float64(msg.Metadata.RedeliveryCount)))
 		if err := d.publisher.Publish(ctx, msg); err != nil {
 			errs = multierror.Append(errs, err)
 			continue
@@ -110,7 +116,7 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 	return msgPublished, errs.ErrorOrNil()
 }
 
-func (d *defaultEventWriter) parseHeader(msg *Message) {
+func (d *defaultEventWriter) marshalMessage(msg *Message) {
 	for k, v := range d.header {
 		switch k {
 		case HeaderMessageKind:

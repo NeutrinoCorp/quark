@@ -7,5 +7,6 @@ require (
 	github.com/eapache/queue v1.1.0
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-multierror v1.1.0
+	github.com/jpillora/backoff v1.0.0
 	github.com/stretchr/testify v1.6.1
 )

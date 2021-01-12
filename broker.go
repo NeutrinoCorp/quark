@@ -26,6 +26,8 @@ type Broker struct {
 	ConnRetries      int
 	ConnRetryBackoff time.Duration
 
+	MessageIdGenerator func() string
+
 	BaseContext context.Context
 
 	nodes          map[int]*node
@@ -39,7 +41,7 @@ type Broker struct {
 var (
 	defaultPoolSize         = 5
 	defaultMaxRetries       = 3
-	defaultRetryBackoff     = time.Second * 5
+	defaultRetryBackoff     = time.Second * 3
 	defaultConnRetries      = 3
 	defaultConnRetryBackoff = time.Second * 5
 	shutdownPollInterval    = time.Millisecond * 500
@@ -256,4 +258,11 @@ func (b *Broker) setDefaultConnRetryBackoff() time.Duration {
 		return b.ConnRetryBackoff
 	}
 	return defaultConnRetryBackoff
+}
+
+func (b *Broker) setDefaultMessageIdGenerator() IdGenerator {
+	if b.MessageIdGenerator != nil {
+		return b.MessageIdGenerator
+	}
+	return defaultIdGenerator
 }
