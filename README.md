@@ -6,11 +6,11 @@ Quark offers a fine-tuned set of tools to ease overall complexity.
 
 In Addition, `Quark` _fans-out processes per-consumer to_ **parallelize blocking I/O** _tasks_ (as consuming from a queue/topic would be) and isolate them. Thread-safe and graceful shutdown are a very important part of Quark.
 
-Furthermore, `Quark` stores specific data _(e.g. event id, correlation id, span context, etc)_ into messages headers in binary format to ease disk consumption on the infrastructure and it lets users use their own encoding preferred library. _(JSON, Apache Avro, etc.)_
+Furthermore, `Quark` stores specific data _(e.g. event id, correlation id, span context, etc)_ into messages headers in a binary format to ease disk consumption on the infrastructure, and it lets users use their own encoding preferred library. _(JSON, Apache Avro, etc.)_
 
-Therefore, `Quark` lets developers take advantage of those mechanisms with its default configuration and a `gorilla/mux`-like router/mux to keep them in ease and get befenits without complex configurations and handling. You can either choose use _global configurations_ specified in the broker or use an _specific configuration_ for an specific consumer.
+Therefore, `Quark` lets developers take advantage of those mechanisms with its default configuration and a `gorilla/mux`-like router/mux to keep them in ease and get benefits without complex configurations and handling. You can either choose use _global configurations_ specified in the broker or use an _specific configuration_ for a specific consumer.
 
-_We currently offer Apache Kafka and AWS SNS/SQS implementations, yet we will be adding more implementations such as RabbitMQ and NATS in a near future._
+_We currently offer Apache Kafka and AWS SNS/SQS implementations, yet we will be adding more implementations such as GCP PubSub, RabbitMQ and NATS in a near future._
 
 ## Installation
 
@@ -22,7 +22,7 @@ Note that quark only supports the two most recent minor versions of Go.
 
 Before we set up our consumers, we must define our `Broker` and its required configuration to work as desired.
 
-The following example demostrates how to set up an _Apache Kafka_ `Broker` with an error handler (hook).
+The following example demonstrates how to set up an _Apache Kafka_ `Broker` with an error handler (hook).
 
 _When using Apache Kafka, `Shopify/sarama` package is required as we rely on its mechanisms._
 
@@ -35,8 +35,8 @@ b.ErrorHandler = func(ctx context.Context, err error) {
 }
 ```
 
-Quark is very straight foward as is based on the `net/http` and `gorilla/mux` packages.
-This example demostrates how to listen to an asynchronous topic using the `Topic` function.
+Quark is very straight forward as is based on the `net/http` and `gorilla/mux` packages.
+This example demonstrates how to listen to an asynchronous topic using the `Topic` function.
 
 If no pool-size was specified, `Quark` will set up to 5 `workers` per-consumer node.
 
@@ -49,7 +49,7 @@ b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 })
 ```
 
-Quark parallelize consumers tasks into a pool of `workers` using goroutines and executes graceful shutdown by default. 
+Quark parallelize consumers tasks into a pool of `workers` using goroutines and executes a graceful shutdown by default. 
 
 The pool size can be defined by the user with a `PoolSize` attribute.
 
@@ -62,7 +62,7 @@ b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Eve
 })
 ```
 
-Quark is based on _reliable mechanisms_. To make use of them, one needs to specify on either the `Broker` or on an specific topic.
+Quark is based on _reliable mechanisms_. To make use of them, one needs to specify on either the `Broker` or on a specific topic.
 
 This method relies on `defaultEventWriter` as it contains preconfigured reliable mechanisms to avoid message loops and more functionalities.
 
@@ -76,7 +76,7 @@ b.Topic("cosmos.payments").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(
 	return true
   }
   
-  // publish messages to retry queue, message loop will be avoided by defaultEventWritter
+  // publish messages to retry queue, message loop will be avoided by defaultEventWriter
   e.Body.Metadata.RedeliveryCount++
   w.Header().Set(quark.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
   _, _ = w.Write(e.Context, e.RawValue, "retry.cosmos.payment")
@@ -86,7 +86,7 @@ b.Topic("cosmos.payments").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(
 
 To conclude, after setting up all of our consumers, we must start the `Broker` up to trigger and rise all the specified `Consumer`.
 
-Dont forget to graceful shutdown as if you were shutting down a `net/http` server.
+Don't forget to graceful shutdown as if you were shutting down a `net/http` server.
 
 ```go
 // graceful shutdown
@@ -132,7 +132,7 @@ b.Topic("chat.1").Group("awesome-group").HandleFunc(func(w quark.EventWriter, e 
 
 **Fanning-in messages/queues into a single consumer**
 
-The following example demostrates how to do the current case using the `mux` and the `Topics` function.
+The following example demonstrates how to do the current case using the `mux` and the `Topics` function.
 
 _When fan-in is configured, the `Consumer` must be inside a `Group`_
 
@@ -149,9 +149,9 @@ b.Topics("chat.0", "chat.1").Group("chat-group").HandleFunc(func(w quark.EventWr
 
 Say you were listening topics from Kafka, yet you want to publish the output into AWS SNS instead Kafka (specified in the global configuration).
 
-The following example demostrates how to tackle the previous scenario with Quark.
+The following example demonstrates how to tackle the previous scenario with Quark.
 
-Therefore, the use of `Group` is crucial here since `Partition Consumer` is treated as single unit of processing and it would publish the message N-times (the pool size since `Consumer` workers are running in parallel).
+Therefore, the use of `Group` is crucial here since `Partition Consumer` is treated as single unit of processing, and it would publish the message N-times (the pool size since `Consumer` workers are running in parallel).
 
 ```go
 type AWSPublisher struct{}
@@ -177,20 +177,8 @@ See the [documentation][doc], [examples][examples] and [FAQ](FAQ.md) for more de
 
 ## Performance
 
-For applications that log in the hot path, reflection-based serialization and
-string formatting are prohibitively expensive &mdash; they're CPU-intensive
-and make many small allocations. Put differently, using `encoding/json` and
-`fmt.Fprintf` to log tons of `interface{}`s makes your application slow.
-
-Quark takes a different approach. It includes a reflection-free, zero-allocation
-JSON encoder, and the base `Logger` strives to avoid serialization overhead
-and allocations wherever possible. By building the high-level `SugaredLogger`
-on that foundation, zap lets users *choose* when they need to count every
-allocation and when they'd prefer a more familiar, loosely typed API.
-
-As measured by its own [benchmarking suite][], not only is zap more performant
-than comparable structured logging packages &mdash; it's also faster than the
-standard library. Like all benchmarks, take these with a grain of salt.<sup
+As measured by its own [benchmarking suite][], not only is quark more performant
+than comparable messaging processors packages. Like all benchmarks, take these with a grain of salt.<sup
 id="anchor-versions">[1](#footnote-versions)</sup>
 
 ## Supported Infrastructure
