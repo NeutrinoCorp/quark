@@ -10,7 +10,7 @@ Furthermore, `Quark` stores specific data _(e.g. event id, correlation id, span 
 
 Therefore, `Quark` lets developers take advantage of those mechanisms with its default configuration and a `gorilla/mux`-like router/mux to keep them in ease and get benefits without complex configurations and handling. You can either choose use _global configurations_ specified in the broker or use an _specific configuration_ for a specific consumer.
 
-_We currently offer Apache Kafka and AWS SNS/SQS implementations, yet we will be adding more implementations such as GCP PubSub, RabbitMQ and NATS in a near future._
+_We currently offer Apache Kafka and Amazon Web Services SNS/SQS implementations. Therefore, we will be adding more implementations such as Google Cloud PubSub, RabbitMQ and NATS in a very near future._
 
 ## Installation
 
