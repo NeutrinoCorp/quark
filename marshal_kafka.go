@@ -20,7 +20,7 @@ func MarshalKafkaMessage(msg *Message) *sarama.ProducerMessage {
 
 	return &sarama.ProducerMessage{
 		Topic:     msg.Kind,
-		Key:       nil,
+		Key:       sarama.StringEncoder(msg.Id),
 		Value:     msg,
 		Headers:   MarshalKafkaHeaders(msg),
 		Metadata:  nil,
@@ -69,11 +69,14 @@ func MarshalKafkaHeaders(msg *Message) []sarama.RecordHeader {
 // UnmarshalKafkaHeaders parses the given Apache Kafka message into a Message
 func UnmarshalKafkaHeaders(msgC *sarama.ConsumerMessage) *Message {
 	msg := new(Message)
+	msg.Id = string(msgC.Key)
 	msg.Metadata.ExternalData = map[string]string{}
 	for _, f := range msgC.Headers {
 		switch string(f.Key) {
 		case HeaderMessageId:
-			msg.Id = string(f.Value)
+			if msg.Id == "" {
+				msg.Id = string(f.Value)
+			}
 		case HeaderMessageKind:
 			msg.Kind = string(f.Value)
 		case HeaderMessagePublishTime:
