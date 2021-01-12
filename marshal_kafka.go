@@ -7,6 +7,7 @@ import (
 	"github.com/Shopify/sarama"
 )
 
+// MarshalKafkaMessage parses the given Message into a Apache Kafka producer message
 func MarshalKafkaMessage(msg *Message) *sarama.ProducerMessage {
 	partition, err := strconv.ParseInt(msg.Metadata.ExternalData[HeaderKafkaPartition], 10, 32)
 	if err != nil {
@@ -29,6 +30,7 @@ func MarshalKafkaMessage(msg *Message) *sarama.ProducerMessage {
 	}
 }
 
+// MarshalKafkaHeaders parses the given Message and its metadata into Apache Kafka's header types
 func MarshalKafkaHeaders(msg *Message) []sarama.RecordHeader {
 	h := make([]sarama.RecordHeader, 0)
 	publishTime, err := msg.PublishTime.MarshalBinary()
@@ -64,6 +66,7 @@ func MarshalKafkaHeaders(msg *Message) []sarama.RecordHeader {
 	return h
 }
 
+// UnmarshalKafkaHeaders parses the given Apache Kafka message into a Message
 func UnmarshalKafkaHeaders(msgC *sarama.ConsumerMessage) *Message {
 	msg := new(Message)
 	msg.Metadata.ExternalData = map[string]string{}

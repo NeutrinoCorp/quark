@@ -6,6 +6,7 @@ import (
 	"github.com/Shopify/sarama"
 )
 
+// NewKafkaHeader creates a Message Header from an Apache Kafka message
 func NewKafkaHeader(msg *sarama.ConsumerMessage) Header {
 	h := Header{}
 	h.Set(HeaderKafkaPartition, strconv.Itoa(int(msg.Partition)))

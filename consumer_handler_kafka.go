@@ -7,6 +7,11 @@ import (
 	"github.com/Shopify/sarama"
 )
 
+// KafkaPartitionConsumer This consumer is the default way to consume messages from Apache Kafka.
+//
+// It pulls messages from an specific partition inside an Apache Kafka cluster or Broker. This way of consuming messages
+// is useful when actual parallelization of the process itself is required. When in a pool, it will pull messages for
+// each consumer running in a Worker, running the process at the same time in a worker pool.
 type KafkaPartitionConsumer interface {
 	Consume(context.Context, sarama.PartitionConsumer, *Consumer, EventWriter)
 }
@@ -15,6 +20,7 @@ type defaultKafkaPartitionConsumer struct {
 	worker *kafkaWorker
 }
 
+// Consume starts consuming from a single Apache Kafka partition
 func (k *defaultKafkaPartitionConsumer) Consume(ctx context.Context, p sarama.PartitionConsumer, c *Consumer,
 	e EventWriter) {
 	for msgConsumer := range p.Messages() {

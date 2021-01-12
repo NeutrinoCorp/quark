@@ -36,6 +36,7 @@ type metadata struct {
 	ExternalData map[string]string `json:"external_data"`
 }
 
+// NewMessage creates a new message without a parent message
 func NewMessage(id, kind string, attributes []byte) *Message {
 	return &Message{
 		Id:          id,
@@ -51,6 +52,7 @@ func NewMessage(id, kind string, attributes []byte) *Message {
 	}
 }
 
+// NewMessageFromParent creates a new Message setting as parent (on the CorrelationId field) the given parentId
 func NewMessageFromParent(parentId, id, kind string, attributes []byte) *Message {
 	return &Message{
 		Id:          id,
@@ -66,10 +68,12 @@ func NewMessageFromParent(parentId, id, kind string, attributes []byte) *Message
 	}
 }
 
+// Encode returns the encoded attributes
 func (m Message) Encode() ([]byte, error) {
 	return m.Attributes, nil
 }
 
+// Length bytes size of the current message's attributes
 func (m Message) Length() int {
 	return len(m.Attributes)
 }

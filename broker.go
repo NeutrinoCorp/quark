@@ -102,6 +102,7 @@ func (b *Broker) ListenAndServe() error {
 	return b.Serve()
 }
 
+// Serve starts the broker components
 func (b *Broker) Serve() error {
 	for {
 		if b.BaseContext == nil {
@@ -135,6 +136,7 @@ func (b *Broker) startNodes(ctx context.Context) error {
 	return nil
 }
 
+// Shutdown starts Broker graceful shutdown of its components
 func (b *Broker) Shutdown(ctx context.Context) error {
 	b.inShutdown.setTrue()
 	b.mu.Lock()
@@ -205,10 +207,12 @@ func (b *Broker) Topics(topics ...string) *Consumer {
 	return b.EventMux.Topics(topics...)
 }
 
+// RunningNodes returns the current number of running nodes
 func (b *Broker) RunningNodes() int {
 	return b.runningNodes
 }
 
+// RunningWorkers returns the current number of running workers (inside every node)
 func (b *Broker) RunningWorkers() int {
 	return b.runningWorkers
 }
