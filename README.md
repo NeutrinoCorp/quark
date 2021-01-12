@@ -1,16 +1,18 @@
 # :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Report Status][rep-img]][rep] [![Go Version][go-img]][go]
 Reliable Event-Driven mechanisms for reactive ecosystems written in Go.
 
-Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/) who serve 1M+ requests per-hour, 
-Quark offers a fine-tuned set of tools to ease overall complexity.
+Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/), 
+Quark offers a fine-tuned set of tools to ease overall complexity when distributed message processing is required.
 
-In Addition, `Quark` _fans-out processes per-consumer to_ **parallelize blocking I/O** _tasks_ (as consuming from a queue/topic would be) and isolate them. Thread-safe and graceful shutdown are a very important part of Quark.
+In Addition, `Quark` _fans-out processes per-consumer to_ **parallelize blocking I/O** _tasks_ (as consuming from a queue/topic would be) and isolate them. Thread-safe processing and graceful shutdown are a very important part of Quark.
 
-Furthermore, `Quark` stores specific data _(e.g. event id, correlation id, span context, etc)_ into messages headers in a binary format to ease disk consumption on the infrastructure, and it lets users use their own encoding preferred library. _(JSON, Apache Avro, etc.)_
+Furthermore, `Quark` stores specific data _(e.g. event id, correlation id, span context, etc)_ into messages headers in a binary format to ease disk consumption on the infrastructure. Furthermore, `Quark` lets users use their own encoding preferred library. _(JSON, Apache Avro, etc.)_
 
-Therefore, `Quark` lets developers take advantage of those mechanisms with its default configuration and a `gorilla/mux`-like router/mux to keep them in ease and get benefits without complex configurations and handling. You can either choose use _global configurations_ specified in the broker or use an _specific configuration_ for a specific consumer.
+Therefore, `Quark` lets developers take advantage of those mechanisms with its default configuration and a `gorilla/mux`-like router/mux mechasisms to keep them in ease and get benefits without complex configurations and handling. You can either choose use _global configurations_ specified in the broker or use an _specific configuration_ for a specific consumer.
 
-_We currently offer Apache Kafka and Amazon Web Services SNS/SQS implementations. Therefore, we will be adding more implementations such as Google Cloud PubSub, RabbitMQ and NATS in a very near future._
+Finally, `Quark` exposes a friendly API based on the `net/http` and popular mux (such as `gorilla/mux`) package to increase overall usability and productivity.
+
+_We currently offer Apache Kafka and Amazon Web Services SNS/SQS implementations. Therefore, we will be adding more implementations such as Google Cloud PubSub, Amazon Web Services Event Bridge, RabbitMQ and NATS in a very near future._
 
 ## Installation
 
