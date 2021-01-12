@@ -1,11 +1,18 @@
 package quark
 
 const (
-	KafkaProvider    = "kafka"
-	AWSProvider      = "aws"
-	ActiveMqProvider = "activemq"
+	// KafkaProvider Quark for Apache Kafka
+	KafkaProvider = "kafka"
+	// AWSProvider Quark for Amazon Web Services (SNS, SQS, SNS+SQS, Event Bridge)
+	AWSProvider = "aws"
+	// GCPProvider Quark for Google Cloud Platform (PubSub)
+	GCPProvider = "gcp"
+	// RabbitMqProvider Quark for RabbitMQ
 	RabbitMqProvider = "rabbitmq"
-	NatsProvider     = "nats"
+	// ActiveMqProvider Quark for Apache ActiveMQ
+	ActiveMqProvider = "activemq"
+	// NatsProvider Quark for NATS
+	NatsProvider = "nats"
 )
 
 func ensureValidProvider(provider string, providerCfg interface{}) error {

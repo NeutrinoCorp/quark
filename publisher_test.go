@@ -18,6 +18,7 @@ var publisherTestingSuite = []struct {
 	{AWSProvider, nil, []string{}, nil},
 	{KafkaProvider, AWSConfiguration{}, []string{}, nil},
 	{AWSProvider, KafkaConfiguration{}, []string{}, nil},
+	{GCPProvider, nil, []string{}, nil},
 	{ActiveMqProvider, nil, []string{}, nil},
 	{RabbitMqProvider, nil, []string{}, nil},
 	{NatsProvider, nil, []string{}, nil},

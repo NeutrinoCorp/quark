@@ -13,24 +13,24 @@ import (
 	"github.com/neutrinocorp/quark"
 )
 
-type AWSPublisher struct{}
+type awsPublisherStub struct{}
 
-func (a AWSPublisher) Publish(ctx context.Context, msgs ...*quark.Message) error {
+func (a awsPublisherStub) Publish(ctx context.Context, msgs ...*quark.Message) error {
 	for _, msg := range msgs {
 		log.Printf("publishing - message: %s", msg.Kind)
 	}
 	return nil
 }
 
-type NotificationHandler struct{}
+type notificationHandlerStub struct{}
 
-func (h NotificationHandler) ServeEvent(_ quark.EventWriter, e *quark.Event) bool {
+func (h notificationHandlerStub) ServeEvent(_ quark.EventWriter, e *quark.Event) bool {
 	log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
 	log.Printf("topic: %s | correlation: %s", e.Topic, e.Header.Get(quark.HeaderMessageCorrelationId))
 	return true
 }
 
-func LogErrors() func(context.Context, error) {
+func logErrors() func(context.Context, error) {
 	return func(ctx context.Context, err error) {
 		log.Print(err)
 	}
@@ -56,34 +56,12 @@ func main() {
 	}
 	b.Cluster = []string{"localhost:9092"}
 
-	// Example: Chat, communication between multiple topics
-	/*
-		responded := false
-		b.Topic("chat.0").PoolSize(4).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
-			log.Printf("topic: %s | correlation: %s", e.Topic, e.Header.Get(quark.HeaderMessageCorrelationId))
-			if !responded {
-				// _, _ = w.Write(e.Context, []byte("hello"), "chat.1")
-				responded = true // avoid loops
-			}
-			return true
-		})
-		b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
-			log.Printf("topic: %s | correlation: %s", e.Topic, e.Header.Get(quark.HeaderMessageCorrelationId))
-			if !responded {
-				// _, _ = w.Write(e.Context, []byte("goodbye"), "chat.0")
-				responded = true
-			}
-			return true
-		})*/
-
 	// Example: Listen to multiple notifications using specific resiliency configurations
 	b.Topics("bob.notifications", "alice.notifications").Group("notifications").MaxRetries(5).RetryBackoff(time.Second * 3).
-		Handle(NotificationHandler{})
+		Handle(notificationHandlerStub{})
 
 	// Example: Listen to some user trading using custom publisher provider and sending a response to multiple topics
-	b.Topic("alex.trades").Group("alex.trades").Publisher(AWSPublisher{}).
+	b.Topic("alex.trades").Group("alex.trades").Publisher(awsPublisherStub{}).
 		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 			_, _ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
 				"aws.alex.trades", "aws.analytics.trades")
@@ -112,7 +90,7 @@ func main() {
 			return true
 		})
 
-	b.ErrorHandler = LogErrors()
+	b.ErrorHandler = logErrors()
 
 	// graceful shutdown
 	stop := make(chan os.Signal)

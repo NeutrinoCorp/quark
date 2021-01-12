@@ -18,6 +18,7 @@ var providerTestingSuite = []struct {
 	{AWSProvider, nil, ErrProviderNotValid},
 	{KafkaProvider, AWSConfiguration{}, ErrProviderNotValid},
 	{AWSProvider, KafkaConfiguration{}, ErrProviderNotValid},
+	{GCPProvider, nil, ErrProviderNotValid},
 	{ActiveMqProvider, nil, ErrProviderNotValid},
 	{RabbitMqProvider, nil, ErrProviderNotValid},
 	{NatsProvider, nil, ErrProviderNotValid},
