@@ -96,14 +96,14 @@ func (n *node) setDefaultPoolSize() int {
 }
 
 func (n *node) setDefaultMaxRetries() int {
-	if n.Consumer.maxRetries >= 0 {
+	if n.Consumer.maxRetries > 0 {
 		return n.Consumer.maxRetries
 	}
 	return n.Broker.setDefaultMaxRetries() // use global
 }
 
 func (n *node) setDefaultRetryBackoff() time.Duration {
-	if n.Consumer.retryBackoff >= 0 {
+	if n.Consumer.retryBackoff > 0 {
 		return n.Consumer.retryBackoff
 	}
 	return n.Broker.setDefaultRetryBackoff() // use global

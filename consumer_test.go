@@ -2,6 +2,7 @@ package quark
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -132,9 +133,16 @@ func TestConsumer_TopicString(t *testing.T) {
 	}
 }
 
-type stubPublisher struct{}
+type stubPublisher struct {
+	fail bool
+}
+
+var errStubPublisher = errors.New("generic stub publisher error")
 
 func (a stubPublisher) Publish(context.Context, ...*Message) error {
+	if a.fail {
+		return errStubPublisher
+	}
 	return nil
 }
 

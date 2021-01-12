@@ -40,7 +40,7 @@ type Broker struct {
 
 var (
 	defaultPoolSize         = 5
-	defaultMaxRetries       = 3
+	defaultMaxRetries       = 1
 	defaultRetryBackoff     = time.Second * 3
 	defaultConnRetries      = 3
 	defaultConnRetryBackoff = time.Second * 5
@@ -233,14 +233,14 @@ func (b *Broker) setDefaultPoolSize() int {
 }
 
 func (b *Broker) setDefaultMaxRetries() int {
-	if b.MaxRetries >= 0 {
+	if b.MaxRetries > 0 {
 		return b.MaxRetries
 	}
 	return defaultMaxRetries
 }
 
 func (b *Broker) setDefaultRetryBackoff() time.Duration {
-	if b.RetryBackoff >= 0 {
+	if b.RetryBackoff > 0 {
 		return b.RetryBackoff
 	}
 	return defaultRetryBackoff
