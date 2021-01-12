@@ -1,4 +1,4 @@
-// quark Reliable Event-Driven mechanisms for reactive ecosystems written in Go.
+// Package quark Reliable Event-Driven mechanisms for reactive ecosystems written in Go.
 //
 // Based on reliable mechanisms from companies such as Uber who serve 1M+ requests per-hour, Quark offers a
 // fine-tuned set of tools to ease overall complexity.
