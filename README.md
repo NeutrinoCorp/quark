@@ -1,4 +1,4 @@
-# :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Report Status][rep-img]][rep] [![Go Version][go-img]][go]
+# :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Report Status][rep-img]][rep] [![Codebeat][beat-img]][beat] [![Go Version][go-img]][go]
 Reliable Event-Driven mechanisms for reactive ecosystems written in Go.
 
 Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/), 
@@ -226,6 +226,8 @@ pinned in the [benchmarks/go.mod][] file. [↩](#anchor-versions)
 [rep-img]: https://goreportcard.com/badge/github.com/neutrinocorp/quark
 [rep]: https://goreportcard.com/report/github.com/neutrinocorp/quark
 [cov-img]: https://codecov.io/gh/NeutrinoCorp/quark/branch/master/graph/badge.svg
+[beat-img]: https://codebeat.co/badges/416103dd-8b2a-463e-83fb-5c438c2565ac
+[beat]: https://codebeat.co/projects/github-com-neutrinocorp-quark-master
 [cov]: https://codecov.io/gh/NeutrinoCorp/quark
 [benchmarking suite]: https://github.com/neutrinocrp/quark/tree/master/benchmarks
 [benchmarks/go.mod]: https://github.com/neutrinocorp/quark/blob/master/benchmarks/go.mod
