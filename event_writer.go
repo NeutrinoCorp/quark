@@ -83,9 +83,7 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	msgPublished := 0
 	for _, t := range topics {
 		m := NewMessage(d.Node.Broker.setDefaultMessageIdGenerator()(), t, msg)
-		if err := d.publish(ctx, m); err != nil && errors.Is(err, ErrMessageRedeliveredTooMuch) {
-			continue
-		} else if err != nil {
+		if err := d.publish(ctx, m); err != nil {
 			errs = multierror.Append(errs, err)
 			continue
 		}
@@ -103,9 +101,7 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, msg := range msgs {
-		if err := d.publish(ctx, msg); err != nil && errors.Is(err, ErrMessageRedeliveredTooMuch) {
-			continue
-		} else if err != nil {
+		if err := d.publish(ctx, msg); err != nil {
 			errs = multierror.Append(errs, err)
 			continue
 		}

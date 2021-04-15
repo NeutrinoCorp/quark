@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -24,16 +25,20 @@ func main() {
 		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
 			log.Printf("topic: %s | redelivery: %s", e.Topic, e.Header.Get(quark.HeaderMessageRedeliveryCount))
-			_, _ = w.Write(e.Context, []byte(e.Header.Get(kafka.HeaderKafkaValue)), "chat.1")
+			_, _ = w.Write(e.Context, []byte(e.Body.Data), "chat.1")
 			return true
 		})
 
-	b.Topics("chat.1").PoolSize(1).MaxRetries(5).
+	b.Topics("chat.1").Group("sample-group").PoolSize(10).MaxRetries(3).
 		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 			redelivery := e.Header.Get(quark.HeaderMessageRedeliveryCount)
 			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
 			log.Printf("topic: %s | redelivery: %s", e.Topic, redelivery)
-			_, _ = w.Write(e.Context, []byte(e.Header.Get(kafka.HeaderKafkaValue)), "chat.1")
+			_, err := w.Write(e.Context, e.Body.Data, "chat.1")
+			if errors.Is(err, quark.ErrMessageRedeliveredTooMuch) {
+				w.Header().Set(quark.HeaderMessageRedeliveryCount, "0")
+				_, _ = w.Write(e.Context, e.Body.Data, "dlq.chat.1")
+			}
 			return true
 		})
 
