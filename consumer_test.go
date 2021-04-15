@@ -56,8 +56,6 @@ func TestConsumer(t *testing.T) {
 		assert.Equal(t, "kafka", c.provider)
 		c.PoolSize(10)
 		assert.Equal(t, 10, c.poolSize)
-		c.ProviderConfig(KafkaConfiguration{})
-		assert.Equal(t, KafkaConfiguration{}, c.providerConfig.(KafkaConfiguration))
 		c.Address("localhost")
 		assert.Contains(t, c.cluster, "localhost")
 	})
@@ -87,10 +85,14 @@ func TestConsumer_RetryBackoff(t *testing.T) {
 	})
 }
 
+type stubProviderConfig struct {
+	Foo string
+}
+
 func TestConsumer_GetProviderConfig(t *testing.T) {
 	t.Run("Consumer provider config mutation", func(t *testing.T) {
 		c := Consumer{}
-		cfg := &KafkaConfiguration{}
+		cfg := &stubProviderConfig{}
 		c.ProviderConfig(cfg)
 		assert.Same(t, cfg, c.GetProviderConfig())
 	})
@@ -171,7 +173,6 @@ func BenchmarkConsumer(b *testing.B) {
 			c.Topic("chat.1")
 			c.Provider(KafkaProvider)
 			c.PoolSize(10)
-			c.ProviderConfig(KafkaConfiguration{})
 			c.Address("localhost")
 		}
 	})

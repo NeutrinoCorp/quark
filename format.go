@@ -11,7 +11,7 @@ const (
 	Command = "command"
 	// DomainEvent Message type. Used when something has happened in an specific aggregate and it must propagate
 	// its side-effects in the entire event-driven ecosystem
-	DomainEvent = "domain_event"
+	DomainEvent = "event"
 )
 
 // FormatTopicName forms an Async API topic name

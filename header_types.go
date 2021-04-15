@@ -1,14 +1,28 @@
 package quark
 
+// using CNCF CloudEvents specification v1.0
+// ref. https://cloudevents.io/
+// ref. https://github.com/cloudevents/spec/blob/v1.0.1/spec.md
 const (
 	// HeaderMessageId Message ID
-	HeaderMessageId = "quark-message-id"
-	// HeaderMessageKind Message type (command or domain event)
-	HeaderMessageKind = "quark-kind"
-	// HeaderMessagePublishTime Time when Message was published
-	HeaderMessagePublishTime = "quark-publish-time"
-	// HeaderMessageAttributes Message body encoded bytes
-	HeaderMessageAttributes = "quark-attributes"
+	HeaderMessageId = "quark-id"
+	// HeaderMessageType This attribute contains a value describing the type of event related to the originating occurrence.
+	HeaderMessageType = "quark-type"
+	// HeaderMessageSpecVersion The version of the CloudEvents specification which the event uses.
+	HeaderMessageSpecVersion = "quark-spec-version"
+	// HeaderMessageSource Identifies the context in which an event happened.
+	HeaderMessageSource = "quark-source"
+	// HeaderMessageTime Time when Message was published
+	HeaderMessageTime = "quark-time"
+	// HeaderMessageDataContentType Content type of data value. This attribute enables data to carry any type of content,
+	// whereby format and encoding might differ from that of the chosen event format.
+	HeaderMessageDataContentType = "quark-content-type"
+	// HeaderMessageDataSchema Identifies the schema that data adheres to.
+	HeaderMessageDataSchema = "quark-data-schema"
+	// HeaderMessageData Message body encoded bytes
+	HeaderMessageData = "quark-data"
+	// HeaderMessageSubject This describes the subject of the event in the context of the event producer (identified by source).
+	HeaderMessageSubject = "quark-subject"
 	// HeaderMessageCorrelationId Message parent (origin)
 	HeaderMessageCorrelationId = "quark-metadata-correlation-id"
 	// HeaderMessageHost Node IP from deployed cluster in infrastructure
@@ -23,26 +37,4 @@ const (
 	// HeaderSpanContext Message span parent, used for distributed tracing mechanisms such as OpenCensus, OpenTracing
 	// and/or OpenTelemetry
 	HeaderSpanContext = "quark-span-context"
-
-	// HeaderKafkaPartition Topic partition where Message was stored in Apache Kafka commit log
-	HeaderKafkaPartition = "quark-kafka-partition"
-	// HeaderKafkaOffset Topic partition offset, item number inside an specific Topic partition
-	HeaderKafkaOffset = "quark-kafka-offset"
-	// HeaderKafkaKey Message key on a Apache Kafka Topic, used to group multiple messages by its ID, it can be also used
-	// to compact commit logs by updating and then deleting previous item versions (removes duplicates)
-	HeaderKafkaKey = "quark-kafka-key"
-	// HeaderKafkaValue Apache Kafka message body in binary format
-	HeaderKafkaValue = "quark-kafka-value"
-	// HeaderKafkaTimestamp Apache Kafka insertion time
-	HeaderKafkaTimestamp = "quark-kafka-timestamp"
-	// HeaderKafkaBlockTimestamp Apache Kafka producer insertion time
-	HeaderKafkaBlockTimestamp = "quark-kafka-block-timestamp"
-	// HeaderKafkaMemberId Member unique identifier from an Apache Kafka Consumer Group
-	HeaderKafkaMemberId = "quark-kafka-member-id"
-	// HeaderKafkaGenerationId Unique identifier when Topic partition list is requested when joining an Apache Kafka
-	// Consumer Group
-	HeaderKafkaGenerationId = "quark-kafka-generation-id"
-	// HeaderKafkaHighWaterMarkOffset Last message that was successfully copied to all of the log’s replicas in an Apache
-	// Kafka cluster
-	HeaderKafkaHighWaterMarkOffset = "quark-kafka-high-water-mark-offset"
 )

@@ -9,17 +9,6 @@ type Publisher interface {
 	Publish(context.Context, ...*Message) error
 }
 
-func getDefaultPublisher(provider string, providerCfg interface{}, cluster []string) Publisher {
-	// broker and node already ensured providers, still this is a safe casting and if publisher is nil, event writer
-	// will still return an error when trying to write messages
-	switch provider {
-	case KafkaProvider:
-		if cfg, ok := providerCfg.(KafkaConfiguration); ok {
-			return &defaultKafkaPublisher{
-				cfg:     cfg,
-				cluster: cluster,
-			}
-		}
-	}
-	return nil
-}
+// PublisherFactory is a crucial Broker and/or Consumer component which generates the concrete publishers
+// Quark will use to produce data
+type PublisherFactory func(providerCfg interface{}, cluster []string) Publisher

@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Shopify/sarama"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -27,10 +26,11 @@ type Broker struct {
 	ConnRetryBackoff time.Duration
 
 	MessageIdGenerator func() string
+	WorkerFactory      WorkerFactory
 
 	BaseContext context.Context
 
-	nodes          map[int]*node
+	nodes          map[int]*Node
 	runningNodes   int
 	runningWorkers int
 	mu             sync.Mutex
@@ -48,10 +48,7 @@ var (
 )
 
 // NewBroker allocates and returns a Broker
-func NewBroker(provider string, config interface{}) (*Broker, error) {
-	if err := ensureValidProvider(provider, config); err != nil {
-		return nil, err
-	}
+func NewBroker(provider string, config interface{}) *Broker {
 	return &Broker{
 		Provider:       provider,
 		ProviderConfig: config,
@@ -60,39 +57,10 @@ func NewBroker(provider string, config interface{}) (*Broker, error) {
 		Publisher:      nil,
 		EventMux:       nil,
 		EventWriter:    nil,
-		nodes:          make(map[int]*node),
+		nodes:          make(map[int]*Node),
 		mu:             sync.Mutex{},
 		inShutdown:     0,
 		doneChan:       nil,
-	}, nil
-}
-
-// NewKafkaBroker allocates and returns a Kafka Broker
-func NewKafkaBroker(cfg *sarama.Config, addrs ...string) *Broker {
-	return &Broker{
-		Provider: KafkaProvider,
-		ProviderConfig: KafkaConfiguration{
-			Config: cfg,
-			Consumer: KafkaConsumerConfig{
-				GroupHandler:     nil,
-				PartitionHandler: nil,
-				Topic: KafkaConsumerTopicConfig{
-					Partition: 0,
-					Offset:    sarama.OffsetNewest,
-				},
-				OnReceived: nil,
-			},
-			Producer: KafkaProducerConfig{},
-		},
-		Cluster:      addrs,
-		ErrorHandler: nil,
-		Publisher:    nil,
-		EventMux:     nil,
-		EventWriter:  nil,
-		nodes:        make(map[int]*node),
-		mu:           sync.Mutex{},
-		inShutdown:   0,
-		doneChan:     nil,
 	}
 }
 
@@ -115,10 +83,8 @@ func (b *Broker) Serve() error {
 			return err
 		}
 
-		select {
-		case <-b.getDoneChanLocked():
-			return b.Shutdown(b.BaseContext)
-		}
+		<-b.getDoneChanLocked()
+		b.Shutdown(b.BaseContext)
 	}
 }
 
@@ -197,7 +163,7 @@ func (b *Broker) closeNodes() error {
 	return errs.ErrorOrNil()
 }
 
-// Topic adds new Consumer node to the given EventMux
+// Topic adds new Consumer Node to the given EventMux
 func (b *Broker) Topic(topic string) *Consumer {
 	b.setDefaultMux()
 	return b.EventMux.Topic(topic)
@@ -214,7 +180,7 @@ func (b *Broker) RunningNodes() int {
 	return b.runningNodes
 }
 
-// RunningWorkers returns the current number of running workers (inside every node)
+// RunningWorkers returns the current number of running workers (inside every Node)
 func (b *Broker) RunningWorkers() int {
 	return b.runningWorkers
 }
@@ -265,4 +231,14 @@ func (b *Broker) setDefaultMessageIdGenerator() IdGenerator {
 		return b.MessageIdGenerator
 	}
 	return defaultIdGenerator
+}
+
+// GetConnRetries retrieves the default connection retries
+func (b *Broker) GetConnRetries() int {
+	return b.setDefaultConnRetries()
+}
+
+// GetConnRetryBackoff retrieves the default connection retry backoff
+func (b *Broker) GetConnRetryBackoff() time.Duration {
+	return b.setDefaultConnRetryBackoff()
 }

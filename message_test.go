@@ -22,8 +22,8 @@ func TestNewMessage(t *testing.T) {
 	t.Run("New Message", func(t *testing.T) {
 		for _, tt := range newMessageTestingSuite {
 			msg := NewMessage(id, tt.n, []byte("hello"))
-			assert.Equal(t, tt.expected, msg.Kind)
-			assert.Equal(t, "hello", string(msg.Attributes))
+			assert.Equal(t, tt.expected, msg.Type)
+			assert.Equal(t, "hello", string(msg.Data))
 		}
 	})
 }
@@ -44,8 +44,8 @@ func TestNewMessageFromParent(t *testing.T) {
 	t.Run("New Message from parent", func(t *testing.T) {
 		for _, tt := range newMessageTestingSuite {
 			msg := NewMessageFromParent(parentId, id, tt.n, []byte("hello"))
-			assert.Equal(t, tt.expected, msg.Kind)
-			assert.Equal(t, "hello", string(msg.Attributes))
+			assert.Equal(t, tt.expected, msg.Type)
+			assert.Equal(t, "hello", string(msg.Data))
 			assert.Equal(t, parentId, msg.Metadata.CorrelationId)
 		}
 	})

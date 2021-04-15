@@ -32,6 +32,8 @@ type Consumer struct {
 	handler Handler
 	// HandlerFunc specific func Quark will use to send messages
 	handlerFunc HandlerFunc
+	// WorkerFactory specific Node's concrete worker(s)
+	workerFactory WorkerFactory
 }
 
 // Topic A Broker will use this topic to subscribe the Consumer
@@ -121,6 +123,12 @@ func (c *Consumer) HandleFunc(handlerFunc HandlerFunc) *Consumer {
 	return c
 }
 
+// WorkerFactory specific Quark Node's concrete worker generator
+func (c *Consumer) WorkerFactory(f WorkerFactory) *Consumer {
+	c.workerFactory = f
+	return c
+}
+
 // TopicString returns every topic registered into the current consumer as string
 func (c Consumer) TopicString() string {
 	topics := ""
@@ -132,4 +140,24 @@ func (c Consumer) TopicString() string {
 	}
 
 	return topics
+}
+
+// GetGroup returns the current Consumer group
+func (c *Consumer) GetGroup() string {
+	return c.group
+}
+
+// GetHandle returns the current consumer Handler component
+func (c *Consumer) GetHandle() Handler {
+	return c.handler
+}
+
+// GetHandleFunc returns the current consumer Handler function component
+func (c *Consumer) GetHandleFunc() HandlerFunc {
+	return c.handlerFunc
+}
+
+// GetTopics returns the current consumer Topic slice
+func (c *Consumer) GetTopics() []string {
+	return c.topics
 }

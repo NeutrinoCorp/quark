@@ -1,4 +1,4 @@
-package quark
+package kafka
 
 import (
 	"context"
@@ -7,11 +7,12 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/hashicorp/go-multierror"
+	"github.com/neutrinocorp/quark"
 )
 
 type kafkaWorker struct {
 	id     int
-	parent *node
+	parent *quark.Node
 	cfg    KafkaConfiguration
 
 	group       sarama.ConsumerGroup
@@ -23,14 +24,14 @@ func (k *kafkaWorker) SetID(i int) {
 	k.id = i
 }
 
-func (k *kafkaWorker) Parent() *node {
+func (k *kafkaWorker) Parent() *quark.Node {
 	return k.parent
 }
 
 func (k *kafkaWorker) StartJob(ctx context.Context) error {
 	if err := k.ensureGroup(); err != nil {
 		return err
-	} else if len(k.parent.Consumer.topics) > 1 || k.parent.Consumer.group != "" {
+	} else if len(k.parent.Consumer.GetTopics()) > 1 || k.parent.Consumer.GetGroup() != "" {
 		return k.startConsumerGroup(ctx)
 	}
 	return k.startConsumer(ctx)
@@ -38,15 +39,15 @@ func (k *kafkaWorker) StartJob(ctx context.Context) error {
 
 // might delete this since we already have default groups using topics names
 func (k *kafkaWorker) ensureGroup() error {
-	if len(k.parent.Consumer.topics) > 1 && k.parent.Consumer.group == "" {
-		return ErrRequiredGroup
+	if len(k.parent.Consumer.GetTopics()) > 1 && k.parent.Consumer.GetGroup() == "" {
+		return quark.ErrRequiredGroup
 	}
 
 	return nil
 }
 
 func (k *kafkaWorker) startConsumerGroup(ctx context.Context) error {
-	group, err := sarama.NewConsumerGroup(k.parent.setDefaultCluster(), k.parent.setDefaultGroup(), k.cfg.Config)
+	group, err := sarama.NewConsumerGroup(k.parent.GetCluster(), k.parent.GetGroup(), k.cfg.Config)
 	if err != nil {
 		return err
 	}
@@ -66,13 +67,13 @@ func (k *kafkaWorker) startConsumerGroup(ctx context.Context) error {
 	go func() {
 		retries := 0
 		for {
-			err = k.group.Consume(ctx, k.parent.Consumer.topics, k.setDefaultConsumerGroupHandler())
+			err = k.group.Consume(ctx, k.parent.Consumer.GetTopics(), k.setDefaultConsumerGroupHandler())
 			if errors.Is(err, sarama.ErrClosedConsumerGroup) {
 				return
 			} else if errors.Is(err, sarama.ErrOutOfBrokers) {
-				if retries <= k.parent.Broker.setDefaultConnRetries() {
+				if retries <= k.parent.Broker.GetConnRetries() {
 					retries++
-					time.Sleep(k.parent.Broker.setDefaultConnRetryBackoff() * time.Duration(retries))
+					time.Sleep(k.parent.Broker.GetConnRetryBackoff() * time.Duration(retries))
 					continue
 				}
 			}
@@ -90,13 +91,13 @@ func (k *kafkaWorker) startConsumerGroup(ctx context.Context) error {
 }
 
 func (k *kafkaWorker) startConsumer(ctx context.Context) error {
-	consumer, err := sarama.NewConsumer(k.parent.setDefaultCluster(), k.cfg.Config)
+	consumer, err := sarama.NewConsumer(k.parent.GetCluster(), k.cfg.Config)
 	if err != nil {
 		return err
 	}
 	k.consumer = consumer
 
-	cPartition, err := k.consumer.ConsumePartition(k.parent.Consumer.topics[0], k.cfg.Consumer.Topic.Partition,
+	cPartition, err := k.consumer.ConsumePartition(k.parent.Consumer.GetTopics()[0], k.cfg.Consumer.Topic.Partition,
 		k.cfg.Consumer.Topic.Offset)
 	if err != nil {
 		return err
@@ -116,7 +117,7 @@ func (k *kafkaWorker) startConsumer(ctx context.Context) error {
 	// Blocking I/O
 	go func() {
 		k.setDefaultConsumerPartitionHandler().Consume(ctx, k.partitioner, k.parent.Consumer,
-			k.parent.setDefaultEventWriter())
+			k.parent.GetEventWriter())
 	}()
 
 	return nil

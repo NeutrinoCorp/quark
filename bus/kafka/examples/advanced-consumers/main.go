@@ -9,13 +9,14 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/neutrinocorp/quark"
+	"github.com/neutrinocorp/quark/bus/kafka"
 )
 
 type awsPublisherStub struct{}
 
 func (a awsPublisherStub) Publish(ctx context.Context, msgs ...*quark.Message) error {
 	for _, msg := range msgs {
-		log.Printf("publishing - message: %s", msg.Kind)
+		log.Printf("publishing - message: %s", msg.Type)
 	}
 	return nil
 }
@@ -37,22 +38,20 @@ func logErrors() func(context.Context, error) {
 func main() {
 	// BDD clause
 	// Create broker
-	b, err := quark.NewBroker(quark.KafkaProvider, quark.KafkaConfiguration{
+	b := quark.NewBroker(quark.KafkaProvider, kafka.KafkaConfiguration{
 		Config: newSaramaCfg(),
-		Consumer: quark.KafkaConsumerConfig{
+		Consumer: kafka.KafkaConsumerConfig{
 			GroupHandler:     nil,
 			PartitionHandler: nil,
-			Topic: quark.KafkaConsumerTopicConfig{
+			Topic: kafka.KafkaConsumerTopicConfig{
 				Partition: 0,
 				Offset:    sarama.OffsetNewest,
 			},
 			OnReceived: nil,
 		},
 	})
-	if err != nil {
-		panic(err)
-	}
 	b.Cluster = []string{"localhost:19092", "localhost:29092", "localhost:39092"}
+	b.Publisher = kafka.NewKafkaPublisher(b.ProviderConfig.(kafka.KafkaConfiguration), b.Cluster...)
 
 	// Example: Listen to multiple notifications using specific resiliency configurations
 	b.Topics("bob.notifications", "alice.notifications").Group("notifications").MaxRetries(5).RetryBackoff(time.Second * 3).
@@ -89,7 +88,7 @@ func main() {
 	stop := make(chan os.Signal)
 	signal.Notify(stop, os.Interrupt)
 	go func() {
-		if err = b.ListenAndServe(); err != nil && err != quark.ErrBrokerClosed {
+		if err := b.ListenAndServe(); err != nil && err != quark.ErrBrokerClosed {
 			log.Fatal(err)
 		}
 	}()
@@ -100,7 +99,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	if err = b.Shutdown(ctx); err != nil {
+	if err := b.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}
 

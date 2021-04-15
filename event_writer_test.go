@@ -17,18 +17,18 @@ var eventWriterHeaderTestingSuite = []struct {
 }{
 	{
 		in: Header{
-			HeaderMessageKind:            "foo",
+			HeaderMessageType:            "foo",
 			HeaderMessageCorrelationId:   "123",
 			HeaderMessageHost:            "192.168.1.1",
 			HeaderMessageRedeliveryCount: "1",
 			HeaderMessageError:           "cassandra: foo bar error",
 		},
 		exp: &Message{
-			Id:          "",
-			Kind:        "foo",
-			PublishTime: time.Time{},
-			Attributes:  nil,
-			Metadata: metadata{
+			Id:   "",
+			Type: "foo",
+			Time: time.Time{},
+			Data: nil,
+			Metadata: MessageMetadata{
 				CorrelationId:   "123",
 				Host:            "192.168.1.1",
 				RedeliveryCount: 1,
@@ -44,16 +44,16 @@ func TestEventWriterHeader(t *testing.T) {
 	for _, tt := range eventWriterHeaderTestingSuite {
 		t.Run("Event Writer header manipulation", func(t *testing.T) {
 			w := &defaultEventWriter{
-				node:      nil,
+				Node:      nil,
 				publisher: nil,
 				header:    tt.in,
 			}
 			msg := &Message{
-				Id:          "",
-				Kind:        "",
-				PublishTime: time.Time{},
-				Attributes:  nil,
-				Metadata: metadata{
+				Id:   "",
+				Type: "",
+				Time: time.Time{},
+				Data: nil,
+				Metadata: MessageMetadata{
 					CorrelationId:   "",
 					Host:            "",
 					RedeliveryCount: 0,
@@ -62,7 +62,7 @@ func TestEventWriterHeader(t *testing.T) {
 			}
 			w.marshalMessage(msg)
 			assert.Exactly(t, tt.exp, msg)
-			w.injectHeader(nil) // overrides
+			w.ReplaceHeader(nil) // overrides
 			assert.Nil(t, w.Header())
 		})
 	}
@@ -88,7 +88,7 @@ func TestEventWriterWrite(t *testing.T) {
 	for _, tt := range eventWriterPublishTestingSuite {
 		ctx := context.Background()
 		t.Run("Event Writer write", func(t *testing.T) {
-			w := newEventWriter(&node{Consumer: &Consumer{}, Broker: &Broker{
+			w := newEventWriter(&Node{Consumer: &Consumer{}, Broker: &Broker{
 				MaxRetries:   5,
 				RetryBackoff: time.Millisecond * 150,
 			}}, tt.publisher)
@@ -110,7 +110,7 @@ func TestDefaultEventWriter_WriteMessage(t *testing.T) {
 	for _, tt := range eventWriterPublishTestingSuite {
 		ctx := context.Background()
 		t.Run("Event Writer write message", func(t *testing.T) {
-			w := newEventWriter(&node{Consumer: &Consumer{}, Broker: &Broker{
+			w := newEventWriter(&Node{Consumer: &Consumer{}, Broker: &Broker{
 				MaxRetries:   5,
 				RetryBackoff: time.Millisecond * 150,
 			}}, tt.publisher)
@@ -123,11 +123,11 @@ func TestDefaultEventWriter_WriteMessage(t *testing.T) {
 			msgs := make([]*Message, 0)
 			for _, topic := range tt.topics {
 				msgs = append(msgs, &Message{
-					Id:          "123",
-					Kind:        topic,
-					PublishTime: time.Time{},
-					Attributes:  nil,
-					Metadata: metadata{
+					Id:   "123",
+					Type: topic,
+					Time: time.Time{},
+					Data: nil,
+					Metadata: MessageMetadata{
 						CorrelationId:   "123",
 						Host:            "192.168.1.1",
 						RedeliveryCount: 0,

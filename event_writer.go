@@ -16,7 +16,7 @@ import (
 //
 // Uses a Publisher to write the actual message
 type EventWriter interface {
-	injectHeader(Header)
+	ReplaceHeader(Header)
 	// Publisher actual publisher used to push Event(s)
 	Publisher() Publisher
 	// Header Event metadata
@@ -36,19 +36,20 @@ type EventWriter interface {
 	WriteMessage(context.Context, ...*Message) (int, error)
 }
 
-var errRedeliveredTooMuch = errors.New("message has been redelivered too much")
+// ErrMessageRedeliveredTooMuch the message has been published the number of times of the configuration limit
+var ErrMessageRedeliveredTooMuch = errors.New("message has been redelivered too much")
 
 type defaultEventWriter struct {
-	node      *node
+	Node      *Node
 	publisher Publisher
 	header    Header
 	backoff   *backoff.Backoff
 }
 
 // newEventWriter allocates and creates a default EventWriter
-func newEventWriter(n *node, p Publisher) EventWriter {
+func newEventWriter(n *Node, p Publisher) EventWriter {
 	return &defaultEventWriter{
-		node:      n,
+		Node:      n,
 		publisher: p,
 		header:    Header{},
 		backoff: &backoff.Backoff{
@@ -60,7 +61,7 @@ func newEventWriter(n *node, p Publisher) EventWriter {
 	}
 }
 
-func (d *defaultEventWriter) injectHeader(h Header) {
+func (d *defaultEventWriter) ReplaceHeader(h Header) {
 	d.header = h
 }
 
@@ -81,8 +82,8 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, t := range topics {
-		m := NewMessage(d.node.Broker.setDefaultMessageIdGenerator()(), t, msg)
-		if err := d.publish(ctx, m); err != nil && errors.Is(err, errRedeliveredTooMuch) {
+		m := NewMessage(d.Node.Broker.setDefaultMessageIdGenerator()(), t, msg)
+		if err := d.publish(ctx, m); err != nil && errors.Is(err, ErrMessageRedeliveredTooMuch) {
 			continue
 		} else if err != nil {
 			errs = multierror.Append(errs, err)
@@ -102,7 +103,7 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, msg := range msgs {
-		if err := d.publish(ctx, msg); err != nil && errors.Is(err, errRedeliveredTooMuch) {
+		if err := d.publish(ctx, msg); err != nil && errors.Is(err, ErrMessageRedeliveredTooMuch) {
 			continue
 		} else if err != nil {
 			errs = multierror.Append(errs, err)
@@ -115,8 +116,8 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 
 func (d *defaultEventWriter) publish(ctx context.Context, msg *Message) error {
 	d.marshalMessage(msg)
-	if msg.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
-		return errRedeliveredTooMuch
+	if msg.Metadata.RedeliveryCount >= d.Node.setDefaultMaxRetries() {
+		return ErrMessageRedeliveredTooMuch
 	}
 
 	time.Sleep(d.backoff.ForAttempt(float64(msg.Metadata.RedeliveryCount)))
@@ -129,8 +130,8 @@ func (d *defaultEventWriter) publish(ctx context.Context, msg *Message) error {
 func (d *defaultEventWriter) marshalMessage(msg *Message) {
 	for k, v := range d.header {
 		switch k {
-		case HeaderMessageKind:
-			msg.Kind = v
+		case HeaderMessageType:
+			msg.Type = v
 		case HeaderMessageCorrelationId:
 			if v != "" {
 				msg.Metadata.CorrelationId = v

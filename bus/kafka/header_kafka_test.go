@@ -1,4 +1,4 @@
-package quark
+package kafka
 
 import (
 	"strconv"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/neutrinocorp/quark"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,7 @@ func TestNewKafkaHeader(t *testing.T) {
 		kafkaMsg.Timestamp = now
 		kafkaMsg.BlockTimestamp = now.Add(time.Hour * 1)
 		kafkaMsg.Headers = []*sarama.RecordHeader{
-			{[]byte(HeaderMessageId), []byte("1")},
+			{[]byte(quark.HeaderMessageId), []byte("1")},
 		}
 
 		h := NewKafkaHeader(kafkaMsg)
@@ -30,7 +31,7 @@ func TestNewKafkaHeader(t *testing.T) {
 		assert.Equal(t, string(kafkaMsg.Value), h.Get(HeaderKafkaValue))
 		assert.Equal(t, kafkaMsg.Timestamp.String(), h.Get(HeaderKafkaTimestamp))
 		assert.Equal(t, kafkaMsg.BlockTimestamp.String(), h.Get(HeaderKafkaBlockTimestamp))
-		assert.Equal(t, string(kafkaMsg.Headers[0].Value), h.Get(HeaderMessageId))
+		assert.Equal(t, string(kafkaMsg.Headers[0].Value), h.Get(quark.HeaderMessageId))
 	})
 }
 
@@ -44,7 +45,7 @@ func BenchmarkNewKafkaHeader(b *testing.B) {
 	kafkaMsg.Timestamp = now
 	kafkaMsg.BlockTimestamp = now.Add(time.Hour * 1)
 	kafkaMsg.Headers = []*sarama.RecordHeader{
-		{[]byte(HeaderMessageId), []byte("1")},
+		{[]byte(quark.HeaderMessageId), []byte("1")},
 	}
 	b.Run("New kafka header", func(b *testing.B) {
 		b.ReportAllocs()

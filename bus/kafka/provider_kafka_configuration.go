@@ -1,4 +1,4 @@
-package quark
+package kafka
 
 import (
 	"context"
