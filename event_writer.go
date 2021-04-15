@@ -2,6 +2,7 @@ package quark
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -34,6 +35,8 @@ type EventWriter interface {
 	//	Sometimes, the writer might not publish messages to broker since they have passed the maximum redelivery cap
 	WriteMessage(context.Context, ...*Message) (int, error)
 }
+
+var errRedeliveredTooMuch = errors.New("message has been redelivered too much")
 
 type defaultEventWriter struct {
 	node      *node
@@ -79,12 +82,9 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	msgPublished := 0
 	for _, t := range topics {
 		m := NewMessage(d.node.Broker.setDefaultMessageIdGenerator()(), t, msg)
-		d.marshalMessage(m)
-		if m.Metadata.RedeliveryCount > d.node.setDefaultMaxRetries() {
-			continue // avoid distributed loops (at macro scale)
-		}
-		time.Sleep(d.backoff.ForAttempt(float64(m.Metadata.RedeliveryCount)))
-		if err := d.publisher.Publish(ctx, m); err != nil {
+		if err := d.publish(ctx, m); err != nil && errors.Is(err, errRedeliveredTooMuch) {
+			continue
+		} else if err != nil {
 			errs = multierror.Append(errs, err)
 			continue
 		}
@@ -102,18 +102,28 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, msg := range msgs {
-		d.marshalMessage(msg)
-		if msg.Metadata.RedeliveryCount > d.node.setDefaultMaxRetries() {
-			continue // avoid distributed loops (at macro scale)
-		}
-		time.Sleep(d.backoff.ForAttempt(float64(msg.Metadata.RedeliveryCount)))
-		if err := d.publisher.Publish(ctx, msg); err != nil {
+		if err := d.publish(ctx, msg); err != nil && errors.Is(err, errRedeliveredTooMuch) {
+			continue
+		} else if err != nil {
 			errs = multierror.Append(errs, err)
 			continue
 		}
 		msgPublished++
 	}
 	return msgPublished, errs.ErrorOrNil()
+}
+
+func (d *defaultEventWriter) publish(ctx context.Context, msg *Message) error {
+	d.marshalMessage(msg)
+	if msg.Metadata.RedeliveryCount >= d.node.setDefaultMaxRetries() {
+		return errRedeliveredTooMuch
+	}
+
+	time.Sleep(d.backoff.ForAttempt(float64(msg.Metadata.RedeliveryCount)))
+	if d.header.Get(HeaderMessageRedeliveryCount) != "" {
+		msg.Metadata.RedeliveryCount++
+	}
+	return d.publisher.Publish(ctx, msg)
 }
 
 func (d *defaultEventWriter) marshalMessage(msg *Message) {

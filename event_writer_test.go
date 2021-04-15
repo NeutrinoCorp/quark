@@ -3,6 +3,7 @@ package quark
 import (
 	"context"
 	"errors"
+	"log"
 	"strconv"
 	"testing"
 	"time"
@@ -77,9 +78,9 @@ var eventWriterPublishTestingSuite = []struct {
 	{&stubPublisher{fail: false}, []string{}, 0, ErrNotEnoughTopics, 0},
 	{nil, []string{"foo"}, 0, ErrPublisherNotImplemented, 0},
 	{&stubPublisher{fail: true}, []string{"foo"}, 0, errStubPublisher, 0},
-	{&stubPublisher{fail: false}, []string{"foo"}, 6, nil, 0},
+	{&stubPublisher{fail: false}, []string{"foo"}, 5, nil, 0},
 	{&stubPublisher{fail: false}, []string{"foo"}, 0, nil, 1},
-	{&stubPublisher{fail: false}, []string{"foo"}, 5, nil, 1},
+	{&stubPublisher{fail: false}, []string{"foo"}, 4, nil, 1},
 	{&stubPublisher{fail: false}, []string{"foo", "bar", "baz"}, 0, nil, 3},
 }
 
@@ -98,6 +99,7 @@ func TestEventWriterWrite(t *testing.T) {
 				assert.NotNil(t, w.Publisher())
 			}
 			m, err := w.Write(ctx, []byte("You're a rockstar"), tt.topics...)
+			log.Print(err)
 			assert.True(t, errors.Is(err, tt.exp))
 			assert.Equal(t, tt.expWritten, m)
 		})

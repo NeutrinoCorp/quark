@@ -5,11 +5,9 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"time"
 
 	"github.com/Shopify/sarama"
-
 	"github.com/neutrinocorp/quark"
 )
 
@@ -80,11 +78,6 @@ func main() {
 		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
 			log.Printf("topic: %s | redelivery: %d", e.Topic, e.Body.Metadata.RedeliveryCount)
-			if e.Body.Metadata.RedeliveryCount >= 3 {
-				return true // avoid loops
-			}
-			e.Body.Metadata.RedeliveryCount++
-			w.Header().Set(quark.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
 			_, _ = w.Write(e.Context, e.RawValue, e.Topic)
 			// _ = w.Publisher().Publish(e.Context, e.Body) is also valid but will not write given headers
 			return true

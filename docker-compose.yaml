@@ -2,6 +2,7 @@ version: '3.8'
 services:
   zookeeper-1:
     image: confluentinc/cp-zookeeper:latest
+    restart: on-failure
     environment:
       ZOOKEEPER_SERVER_ID: 1
       ZOOKEEPER_CLIENT_PORT: 22181
@@ -15,6 +16,7 @@ services:
 
   zookeeper-2:
     image: confluentinc/cp-zookeeper:latest
+    restart: on-failure
     environment:
       ZOOKEEPER_SERVER_ID: 2
       ZOOKEEPER_CLIENT_PORT: 32181
@@ -28,6 +30,7 @@ services:
 
   zookeeper-3:
     image: confluentinc/cp-zookeeper:latest
+    restart: on-failure
     environment:
       ZOOKEEPER_SERVER_ID: 3
       ZOOKEEPER_CLIENT_PORT: 42181
@@ -41,6 +44,7 @@ services:
 
   kafka-1:
     image: confluentinc/cp-kafka:latest
+    restart: on-failure
     network_mode: host
     depends_on:
       - zookeeper-1
@@ -55,6 +59,7 @@ services:
 
   kafka-2:
     image: confluentinc/cp-kafka:latest
+    restart: on-failure
     network_mode: host
     depends_on:
       - zookeeper-1
@@ -69,6 +74,7 @@ services:
 
   kafka-3:
     image: confluentinc/cp-kafka:latest
+    restart: on-failure
     network_mode: host
     depends_on:
       - zookeeper-1
