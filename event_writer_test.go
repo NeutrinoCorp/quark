@@ -147,3 +147,55 @@ func TestDefaultEventWriter_WriteMessage(t *testing.T) {
 		})
 	}
 }
+
+var eventWriterPublishRetryTestingSuite = []struct {
+	publisher  Publisher
+	topics     []string
+	redelivery int
+	exp        error
+	expWritten int
+}{
+	{&stubPublisher{fail: false}, []string{}, 0, ErrNotEnoughTopics, 0},
+	{nil, []string{"foo"}, 0, ErrPublisherNotImplemented, 0},
+	{&stubPublisher{fail: true}, []string{"foo"}, 0, errStubPublisher, 0},
+	{&stubPublisher{fail: false}, []string{"foo"}, 5, ErrMessageRedeliveredTooMuch, 0},
+	{&stubPublisher{fail: false}, []string{"foo"}, 0, nil, 1},
+	{&stubPublisher{fail: false}, []string{"foo"}, 4, nil, 1},
+	{&stubPublisher{fail: false}, []string{"foo", "bar", "baz"}, 0, nil, 3},
+}
+
+func TestDefaultEventWriter_WriteRetry(t *testing.T) {
+	for _, tt := range eventWriterPublishRetryTestingSuite {
+		ctx := context.Background()
+		t.Run("Event Writer write retry", func(t *testing.T) {
+			w := newEventWriter(&Node{Consumer: &Consumer{}, Broker: &Broker{
+				MaxRetries:   5,
+				RetryBackoff: time.Millisecond * 150,
+			}}, tt.publisher)
+			if tt.publisher == nil {
+				assert.Nil(t, w.Publisher())
+			} else {
+				assert.NotNil(t, w.Publisher())
+			}
+			for _, topic := range tt.topics {
+				msg := &Message{
+					Id:   "",
+					Type: topic,
+					Time: time.Time{},
+					Data: nil,
+					Metadata: MessageMetadata{
+						CorrelationId:   "123",
+						Host:            "192.168.1.1",
+						RedeliveryCount: tt.redelivery,
+						ExternalData: map[string]string{
+							HeaderMessageError: "cassandra: foo bar error",
+						},
+					},
+				}
+				w.Header().Set(HeaderMessageType, topic) // simulate populated message on consumer
+				err := w.WriteRetry(ctx, msg)
+				assert.True(t, errors.Is(err, tt.exp))
+			}
+		})
+	}
+}

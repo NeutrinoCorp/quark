@@ -132,12 +132,9 @@ func (d *defaultEventWriter) WriteRetry(ctx context.Context, msg *Message) error
 
 func (d *defaultEventWriter) publish(ctx context.Context, msg *Message) error {
 	d.marshalMessage(msg)
-	backoffFactor := msg.Metadata.RedeliveryCount
-	if backoffFactor > 0 {
-		backoffFactor -= 1
-	}
 
-	if backoffFactor >= d.Node.setDefaultMaxRetries() {
+	backoffFactor := msg.Metadata.RedeliveryCount
+	if backoffFactor > d.Node.setDefaultMaxRetries() {
 		return ErrMessageRedeliveredTooMuch
 	}
 
