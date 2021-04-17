@@ -28,6 +28,21 @@ type Broker struct {
 	MessageIdGenerator func() string
 	WorkerFactory      WorkerFactory
 
+	// BaseMessageSource is the default Source of a Message based on the CNCF CloudEvents specification v1
+	//
+	// It could be a Internet-wide unique URI with a DNS authority, Universally-unique URN with a UUID or
+	// Application-specific identifiers
+	//
+	// e.g. https://github.com/cloudevents, urn:uuid:6e8bc430-9c3a-11d9-9669-0800200c9a66, /cloudevents/spec/pull/123
+	BaseMessageSource string
+	// BaseMessageContentType is the default Content type of data value. This attribute enables data to carry any type of content,
+	// whereby format and encoding might differ from that of the chosen event format.
+	//
+	// Must adhere to the format specified in RFC 2046
+	//
+	// e.g. application/avro, application/json, application/cloudevents+json
+	BaseMessageContentType string
+
 	BaseContext context.Context
 
 	nodes          map[int]*Node

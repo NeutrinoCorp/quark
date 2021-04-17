@@ -39,8 +39,7 @@ type Message struct {
 	// Often this will include information such as the type of the event source, the organization publishing the event or the process that produced the event.
 	// The exact syntax and semantics behind the data encoded in the URI is defined by the event producer.
 	//
-	//	DNS e.g. /cloudevents/spec/pull/123
-	//	Application-specific e.g. https://github.com/cloudevents
+	// e.g. https://github.com/cloudevents, urn:uuid:6e8bc430-9c3a-11d9-9669-0800200c9a66, /cloudevents/spec/pull/123
 	Source string `json:"source"`
 
 	// -- OPTIONAL --
@@ -49,28 +48,31 @@ type Message struct {
 	//
 	// It is encoded into a media format which is specified by the datacontenttype attribute (e.g. application/json),
 	// and adheres to the dataschema format when those respective attributes are present.
-	Data []byte `json:"data"`
+	Data []byte `json:"data,omitempty"`
 	// ContentType Content type of data value. This attribute enables data to carry any type of content,
 	// whereby format and encoding might differ from that of the chosen event format.
-	ContentType string `json:"datacontenttype"`
+	ContentType string `json:"datacontenttype,omitempty"`
 	// DataSchema Identifies the schema that data adheres to.
 	//
 	// Incompatible changes to the schema SHOULD be reflected by a different URI. See Versioning of Attributes
 	// in the Primer for more information
-	DataSchema string `json:"dataschema"`
+	DataSchema string `json:"dataschema,omitempty"`
 	// Subject This describes the subject of the event in the context of the event producer (identified by source).
 	//
 	// In publish-subscribe scenarios, a subscriber will typically subscribe to events emitted by a source, but the source
 	// identifier alone might not be sufficient as a qualifier for any specific event if the source context has internal sub-structure.
-	Subject string `json:"subject"`
+	//
+	// e.g: source -> https://example.com/storage/tenant/container,
+	// subject -> mynewfile.jpg
+	Subject string `json:"subject,omitempty"`
 	// Time Timestamp of when the occurrence happened.
 	// If the time of the occurrence cannot be determined then this attribute MAY be set to some other time (such as the current time) by the
 	// Quark producer, however all producers for the same source MUST be consistent in this respect.
 	// In other words, either they all use the actual time of the occurrence or they all use the same algorithm to determine the value used.
-	Time time.Time `json:"time"`
+	Time time.Time `json:"time,omitempty"`
 
 	// Metadata message volatile information
-	Metadata MessageMetadata `json:"metadata"`
+	Metadata MessageMetadata `json:"metadata,omitempty"`
 }
 
 // MessageMetadata a message volatile fields, used to store useful Quark resiliency mechanisms and custom
@@ -79,11 +81,11 @@ type MessageMetadata struct {
 	// CorrelationId root message id
 	CorrelationId string `json:"correlation_id"`
 	// Host sender node ip address
-	Host string `json:"host"`
+	Host string `json:"host,omitempty"`
 	// RedeliveryCount attempts this specific message tried to get process
 	RedeliveryCount int `json:"redelivery_count"`
 	// ExternalData non-Quark data may be stored here (e.g. non-Quark headers)
-	ExternalData map[string]string `json:"external_data"`
+	ExternalData map[string]string `json:"external_data,omitempty"`
 }
 
 // NewMessage creates a new message without a parent message

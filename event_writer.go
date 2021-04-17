@@ -35,9 +35,12 @@ type EventWriter interface {
 	//	Sometimes, the writer might not publish messages to broker since they have passed the maximum redelivery cap
 	WriteMessage(context.Context, ...*Message) (int, error)
 	// WriteRetry push the given Event into a retry topic.
+	// Publishing aside, WriteRetry method adds a new ID for every message passed using the Broker's ID Generator/Factory.
 	//
-	// This implementation differs from others since it increments the given message "Redelivery_count" delta by one
-	WriteRetry(context.Context, *Message) error
+	// It is recommended to point the Message's Topic/Type to an specific retry topic/queue (e.g. foo.executed -> foo.executed.retry/foo.executed.retry.N).
+	//
+	// This implementation differs from others because it increments the given Message "redelivery_count" delta field by one
+	WriteRetry(ctx context.Context, msg *Message) error
 }
 
 // ErrMessageRedeliveredTooMuch the message has been published the number of times of the configuration limit
@@ -121,6 +124,7 @@ func (d *defaultEventWriter) WriteRetry(ctx context.Context, msg *Message) error
 		return ErrEmptyMessage
 	}
 
+	msg.Id = d.Node.Broker.setDefaultMessageIdGenerator()()
 	if d.header.Get(HeaderMessageRedeliveryCount) != "" {
 		msg.Metadata.RedeliveryCount++
 	}
@@ -129,16 +133,16 @@ func (d *defaultEventWriter) WriteRetry(ctx context.Context, msg *Message) error
 
 func (d *defaultEventWriter) publish(ctx context.Context, msg *Message) error {
 	d.marshalMessage(msg)
-	if msg.Metadata.RedeliveryCount >= d.Node.setDefaultMaxRetries() {
+	backoffFactor := msg.Metadata.RedeliveryCount
+	if backoffFactor > 0 {
+		backoffFactor -= 1
+	}
+
+	if backoffFactor >= d.Node.setDefaultMaxRetries() {
 		return ErrMessageRedeliveredTooMuch
 	}
 
-	backoffDuration := msg.Metadata.RedeliveryCount
-	if backoffDuration > 0 {
-		backoffDuration -= 1
-	}
-
-	time.Sleep(d.backoff.ForAttempt(float64(backoffDuration)))
+	time.Sleep(d.backoff.ForAttempt(float64(backoffFactor)))
 	return d.publisher.Publish(ctx, msg)
 }
 
@@ -161,4 +165,7 @@ func (d *defaultEventWriter) marshalMessage(msg *Message) {
 			msg.Metadata.ExternalData[k] = v
 		}
 	}
+
+	msg.Source = d.Node.setDefaultSource()
+	msg.ContentType = d.Node.setDefaultContentType()
 }

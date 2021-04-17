@@ -16,6 +16,8 @@ import (
 func main() {
 	// Create broker
 	b := kafka.NewKafkaBroker(newSaramaCfg(), "localhost:9092")
+	b.BaseMessageSource = "https://neutrinocorp.org/cloudevents"
+	b.BaseMessageContentType = "message/partial" // binary RFC content type
 
 	b.ErrorHandler = func(ctx context.Context, err error) {
 		log.Print(err)
@@ -38,6 +40,12 @@ func main() {
 			if errors.Is(err, quark.ErrMessageRedeliveredTooMuch) {
 				_, _ = w.Write(e.Context, e.Body.Data, "dlq.chat.1")
 			}
+			return true
+		})
+
+	b.Topic("dlq.chat.1").Group("foo-group").
+		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+			log.Printf("topic: %s | message: %s", e.Topic, string(e.Body.Data))
 			return true
 		})
 

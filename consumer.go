@@ -34,6 +34,20 @@ type Consumer struct {
 	handlerFunc HandlerFunc
 	// WorkerFactory specific Node's concrete worker(s)
 	workerFactory WorkerFactory
+	// Source is the specific Source of a Message based on the CNCF CloudEvents specification v1
+	//
+	// It could be a Internet-wide unique URI with a DNS authority, Universally-unique URN with a UUID or
+	// Application-specific identifiers
+	//
+	// e.g. https://github.com/cloudevents, urn:uuid:6e8bc430-9c3a-11d9-9669-0800200c9a66, /cloudevents/spec/pull/123
+	source string
+	// ContentType is the default Content type of data value. This attribute enables data to carry any type of content,
+	// whereby format and encoding might differ from that of the chosen event format.
+	//
+	// Must adhere to the format specified in RFC 2046
+	//
+	// e.g. application/avro, application/json, application/cloudevents+json
+	contentType string
 }
 
 // Topic A Broker will use this topic to subscribe the Consumer
@@ -126,6 +140,28 @@ func (c *Consumer) HandleFunc(handlerFunc HandlerFunc) *Consumer {
 // WorkerFactory specific Quark Node's concrete worker generator
 func (c *Consumer) WorkerFactory(f WorkerFactory) *Consumer {
 	c.workerFactory = f
+	return c
+}
+
+// Source is the specific Source of a Message based on the CNCF CloudEvents specification v1
+//
+// It could be a Internet-wide unique URI with a DNS authority, Universally-unique URN with a UUID or
+// Application-specific identifiers
+//
+// e.g. https://github.com/cloudevents, urn:uuid:6e8bc430-9c3a-11d9-9669-0800200c9a66, /cloudevents/spec/pull/123
+func (c *Consumer) Source(s string) *Consumer {
+	c.source = s
+	return c
+}
+
+// ContentType is the default Content type of data value. This attribute enables data to carry any type of content,
+// whereby format and encoding might differ from that of the chosen event format.
+//
+// Must adhere to the format specified in RFC 2046
+//
+// e.g. application/avro, application/json, application/cloudevents+json
+func (c *Consumer) ContentType(t string) *Consumer {
+	c.contentType = t
 	return c
 }
 

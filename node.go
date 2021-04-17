@@ -155,6 +155,20 @@ func (n *Node) setDefaultEventWriter() EventWriter {
 	return newEventWriter(n, n.setDefaultPublisher())
 }
 
+func (n *Node) setDefaultSource() string {
+	if s := n.Consumer.source; s != "" {
+		return s
+	}
+	return n.Broker.BaseMessageSource
+}
+
+func (n *Node) setDefaultContentType() string {
+	if content := n.Consumer.contentType; content != "" {
+		return content
+	}
+	return n.Broker.BaseMessageContentType
+}
+
 // GetEventWriter retrieves the default event writer
 func (n *Node) GetEventWriter() EventWriter {
 	return n.setDefaultEventWriter()
