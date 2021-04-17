@@ -13,6 +13,8 @@ var (
 	ErrNotEnoughTopics = errors.New("not enough topics")
 	// ErrNotEnoughHandlers no consumer handler was found
 	ErrNotEnoughHandlers = errors.New("not enough handlers")
+	// ErrEmptyMessage no message was found
+	ErrEmptyMessage = errors.New("message is empty")
 	// ErrEmptyCluster the current cluster does not contains any hosts/addresses
 	ErrEmptyCluster = errors.New("consumer cluster is empty")
 	// ErrRequiredGroup a consumer group is required

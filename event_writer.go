@@ -31,9 +31,13 @@ type EventWriter interface {
 	//
 	// Returns number of messages published
 	// and non-nil error if publisher failed to push Event
-	//	Remember Quark uses Message's "Kind" field as topic name, so the developer must specify it either in mentioned field or in response headers
+	//	Remember Quark uses Message's "Type" field as topic name, so the developer must specify it either in mentioned field or in response headers
 	//	Sometimes, the writer might not publish messages to broker since they have passed the maximum redelivery cap
 	WriteMessage(context.Context, ...*Message) (int, error)
+	// WriteRetry push the given Event into a retry topic.
+	//
+	// This implementation differs from others since it increments the given message "Redelivery_count" delta by one
+	WriteRetry(context.Context, *Message) error
 }
 
 // ErrMessageRedeliveredTooMuch the message has been published the number of times of the configuration limit
@@ -56,7 +60,7 @@ func newEventWriter(n *Node, p Publisher) EventWriter {
 			Factor: 2,
 			Jitter: true,
 			Min:    n.setDefaultRetryBackoff(),
-			Max:    n.setDefaultRetryBackoff() * 2,
+			Max:    n.setDefaultRetryBackoff() * 3,
 		},
 	}
 }
@@ -110,16 +114,31 @@ func (d *defaultEventWriter) WriteMessage(ctx context.Context, msgs ...*Message)
 	return msgPublished, errs.ErrorOrNil()
 }
 
+func (d *defaultEventWriter) WriteRetry(ctx context.Context, msg *Message) error {
+	if d.publisher == nil {
+		return ErrPublisherNotImplemented
+	} else if msg == nil {
+		return ErrEmptyMessage
+	}
+
+	if d.header.Get(HeaderMessageRedeliveryCount) != "" {
+		msg.Metadata.RedeliveryCount++
+	}
+	return d.publish(ctx, msg)
+}
+
 func (d *defaultEventWriter) publish(ctx context.Context, msg *Message) error {
 	d.marshalMessage(msg)
 	if msg.Metadata.RedeliveryCount >= d.Node.setDefaultMaxRetries() {
 		return ErrMessageRedeliveredTooMuch
 	}
 
-	time.Sleep(d.backoff.ForAttempt(float64(msg.Metadata.RedeliveryCount)))
-	if d.header.Get(HeaderMessageRedeliveryCount) != "" {
-		msg.Metadata.RedeliveryCount++
+	backoffDuration := msg.Metadata.RedeliveryCount
+	if backoffDuration > 0 {
+		backoffDuration -= 1
 	}
+
+	time.Sleep(d.backoff.ForAttempt(float64(backoffDuration)))
 	return d.publisher.Publish(ctx, msg)
 }
 
@@ -133,7 +152,7 @@ func (d *defaultEventWriter) marshalMessage(msg *Message) {
 				msg.Metadata.CorrelationId = v
 			}
 		case HeaderMessageRedeliveryCount:
-			if c, err := strconv.Atoi(v); err == nil {
+			if c, err := strconv.Atoi(v); msg.Type == d.header.Get(HeaderMessageType) && err == nil {
 				msg.Metadata.RedeliveryCount = c
 			}
 		case HeaderMessageHost:

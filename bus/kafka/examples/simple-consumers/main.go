@@ -29,14 +29,13 @@ func main() {
 			return true
 		})
 
-	b.Topics("chat.1").Group("sample-group").PoolSize(10).MaxRetries(3).
+	b.Topics("chat.1").Group("foo-group").PoolSize(2).MaxRetries(3).
 		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 			redelivery := e.Header.Get(quark.HeaderMessageRedeliveryCount)
 			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
 			log.Printf("topic: %s | redelivery: %s", e.Topic, redelivery)
-			_, err := w.Write(e.Context, e.Body.Data, "chat.1")
+			err := w.WriteRetry(e.Context, e.Body)
 			if errors.Is(err, quark.ErrMessageRedeliveredTooMuch) {
-				w.Header().Set(quark.HeaderMessageRedeliveryCount, "0")
 				_, _ = w.Write(e.Context, e.Body.Data, "dlq.chat.1")
 			}
 			return true
