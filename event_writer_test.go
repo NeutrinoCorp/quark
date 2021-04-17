@@ -162,10 +162,11 @@ var eventWriterPublishRetryTestingSuite = []struct {
 	{&stubPublisher{fail: false}, []string{"foo"}, 0, nil, 1},
 	{&stubPublisher{fail: false}, []string{"foo"}, 4, nil, 1},
 	{&stubPublisher{fail: false}, []string{"foo", "bar", "baz"}, 0, nil, 3},
+	{&stubPublisher{fail: false}, []string{"foo"}, 0, ErrEmptyMessage, 0},
 }
 
 func TestDefaultEventWriter_WriteRetry(t *testing.T) {
-	for _, tt := range eventWriterPublishRetryTestingSuite {
+	for i, tt := range eventWriterPublishRetryTestingSuite {
 		ctx := context.Background()
 		t.Run("Event Writer write retry", func(t *testing.T) {
 			w := newEventWriter(&Node{Consumer: &Consumer{}, Broker: &Broker{
@@ -191,6 +192,9 @@ func TestDefaultEventWriter_WriteRetry(t *testing.T) {
 							HeaderMessageError: "cassandra: foo bar error",
 						},
 					},
+				}
+				if i == 7 {
+					msg = nil
 				}
 				w.Header().Set(HeaderMessageType, topic) // simulate populated message on consumer
 				err := w.WriteRetry(ctx, msg)
