@@ -89,7 +89,7 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, t := range topics {
-		m := NewMessage(d.Supervisor.Broker.setDefaultMessageIdGenerator()(), t, msg)
+		m := NewMessage(d.Supervisor.Broker.setDefaultMessageIDFactory()(), t, msg)
 		if err := d.publish(ctx, m); err != nil {
 			errs = multierror.Append(errs, err)
 			continue
@@ -124,7 +124,7 @@ func (d *defaultEventWriter) WriteRetry(ctx context.Context, msg *Message) error
 		return ErrEmptyMessage
 	}
 
-	msg.Id = d.Supervisor.Broker.setDefaultMessageIdGenerator()()
+	msg.Id = d.Supervisor.Broker.setDefaultMessageIDFactory()()
 	msg.Metadata.RedeliveryCount++
 	d.Header().Set(HeaderMessageRedeliveryCount, strconv.Itoa(msg.Metadata.RedeliveryCount))
 	return d.publish(ctx, msg)

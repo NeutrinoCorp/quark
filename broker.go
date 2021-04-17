@@ -241,11 +241,11 @@ func (b *Broker) setDefaultConnRetryBackoff() time.Duration {
 	return defaultConnRetryBackoff
 }
 
-func (b *Broker) setDefaultMessageIdGenerator() IdGenerator {
+func (b *Broker) setDefaultMessageIDFactory() IDFactory {
 	if b.MessageIdGenerator != nil {
 		return b.MessageIdGenerator
 	}
-	return defaultIdGenerator
+	return defaultIDFactory
 }
 
 // GetConnRetries retrieves the default connection retries
