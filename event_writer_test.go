@@ -43,9 +43,9 @@ func TestEventWriterHeader(t *testing.T) {
 	for _, tt := range eventWriterHeaderTestingSuite {
 		t.Run("Event Writer header manipulation", func(t *testing.T) {
 			w := &defaultEventWriter{
-				Node:      nil,
-				publisher: nil,
-				header:    tt.in,
+				Supervisor: nil,
+				publisher:  nil,
+				header:     tt.in,
 			}
 			msg := &Message{
 				Id:   "",
@@ -87,7 +87,7 @@ func TestEventWriterWrite(t *testing.T) {
 	for _, tt := range eventWriterPublishTestingSuite {
 		ctx := context.Background()
 		t.Run("Event Writer write", func(t *testing.T) {
-			w := newEventWriter(&Node{Consumer: &Consumer{}, Broker: &Broker{
+			w := newEventWriter(&Supervisor{Consumer: &Consumer{}, Broker: &Broker{
 				MaxRetries:   5,
 				RetryBackoff: time.Millisecond * 150,
 			}}, tt.publisher)
@@ -111,7 +111,7 @@ func TestDefaultEventWriter_WriteMessage(t *testing.T) {
 	for _, tt := range eventWriterPublishTestingSuite {
 		ctx := context.Background()
 		t.Run("Event Writer write message", func(t *testing.T) {
-			w := newEventWriter(&Node{Consumer: &Consumer{}, Broker: &Broker{
+			w := newEventWriter(&Supervisor{Consumer: &Consumer{}, Broker: &Broker{
 				MaxRetries:   5,
 				RetryBackoff: time.Millisecond * 150,
 			}}, tt.publisher)
@@ -169,7 +169,7 @@ func TestDefaultEventWriter_WriteRetry(t *testing.T) {
 	for i, tt := range eventWriterPublishRetryTestingSuite {
 		ctx := context.Background()
 		t.Run("Event Writer write retry", func(t *testing.T) {
-			w := newEventWriter(&Node{Consumer: &Consumer{}, Broker: &Broker{
+			w := newEventWriter(&Supervisor{Consumer: &Consumer{}, Broker: &Broker{
 				MaxRetries:   5,
 				RetryBackoff: time.Millisecond * 150,
 			}}, tt.publisher)

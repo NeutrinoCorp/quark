@@ -10,7 +10,7 @@ import (
 
 // Broker coordinates every Event operation on the running Event-Driven application.
 //
-// Administrates Consumer(s) Nodes and their workers wrapped with well-known concurrency and resiliency patterns.
+// Administrates Consumer(s) supervisors and their workers wrapped with well-known concurrency and resiliency patterns.
 type Broker struct {
 	Provider         string
 	ProviderConfig   interface{}
@@ -45,7 +45,7 @@ type Broker struct {
 
 	BaseContext context.Context
 
-	nodes          map[int]*Node
+	supervisors    map[int]*Supervisor
 	runningNodes   int
 	runningWorkers int
 	mu             sync.Mutex
@@ -72,7 +72,7 @@ func NewBroker(provider string, config interface{}) *Broker {
 		Publisher:      nil,
 		EventMux:       nil,
 		EventWriter:    nil,
-		nodes:          make(map[int]*Node),
+		supervisors:    make(map[int]*Supervisor),
 		mu:             sync.Mutex{},
 		inShutdown:     0,
 		doneChan:       nil,
@@ -107,11 +107,11 @@ func (b *Broker) startNodes(ctx context.Context) error {
 	for _, consumers := range b.EventMux.List() {
 		for _, c := range consumers {
 			nodeCtx := ctx
-			n := newNode(b, c)
-			if err := n.Consume(nodeCtx); err != nil {
+			n := newSupervisor(b, c)
+			if err := n.ScheduleJobs(nodeCtx); err != nil {
 				return err
 			}
-			b.nodes[b.runningNodes] = n
+			b.supervisors[b.runningNodes] = n
 			b.runningWorkers += n.runningWorkers.Length()
 			b.runningNodes++
 		}
@@ -165,37 +165,37 @@ func (b *Broker) closeDoneChanLocked() {
 
 func (b *Broker) closeNodes() error {
 	errs := new(multierror.Error)
-	for k, n := range b.nodes {
+	for k, n := range b.supervisors {
 		if err := n.Close(); err != nil {
 			errs = multierror.Append(errs, err)
 			continue
 		}
 		b.runningNodes--
 		b.runningWorkers = n.runningWorkers.Length()
-		delete(b.nodes, k)
+		delete(b.supervisors, k)
 	}
 
 	return errs.ErrorOrNil()
 }
 
-// Topic adds new Consumer Node to the given EventMux
+// Topic adds new Consumer Supervisor to the given EventMux
 func (b *Broker) Topic(topic string) *Consumer {
 	b.setDefaultMux()
 	return b.EventMux.Topic(topic)
 }
 
-// Topics adds multiple Consumer nodes to the given EventMux
+// Topics adds multiple Consumer supervisors to the given EventMux
 func (b *Broker) Topics(topics ...string) *Consumer {
 	b.setDefaultMux()
 	return b.EventMux.Topics(topics...)
 }
 
-// RunningNodes returns the current number of running nodes
+// RunningNodes returns the current number of running supervisors
 func (b *Broker) RunningNodes() int {
 	return b.runningNodes
 }
 
-// RunningWorkers returns the current number of running workers (inside every Node)
+// RunningWorkers returns the current number of running workers (inside every Supervisor)
 func (b *Broker) RunningWorkers() int {
 	return b.runningWorkers
 }

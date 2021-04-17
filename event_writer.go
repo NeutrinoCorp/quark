@@ -47,18 +47,18 @@ type EventWriter interface {
 var ErrMessageRedeliveredTooMuch = errors.New("message has been redelivered too much")
 
 type defaultEventWriter struct {
-	Node      *Node
-	publisher Publisher
-	header    Header
-	backoff   *backoff.Backoff
+	Supervisor *Supervisor
+	publisher  Publisher
+	header     Header
+	backoff    *backoff.Backoff
 }
 
 // newEventWriter allocates and creates a default EventWriter
-func newEventWriter(n *Node, p Publisher) EventWriter {
+func newEventWriter(n *Supervisor, p Publisher) EventWriter {
 	return &defaultEventWriter{
-		Node:      n,
-		publisher: p,
-		header:    Header{},
+		Supervisor: n,
+		publisher:  p,
+		header:     Header{},
 		backoff: &backoff.Backoff{
 			Factor: 2,
 			Jitter: true,
@@ -89,7 +89,7 @@ func (d *defaultEventWriter) Write(ctx context.Context, msg []byte, topics ...st
 	errs := new(multierror.Error)
 	msgPublished := 0
 	for _, t := range topics {
-		m := NewMessage(d.Node.Broker.setDefaultMessageIdGenerator()(), t, msg)
+		m := NewMessage(d.Supervisor.Broker.setDefaultMessageIdGenerator()(), t, msg)
 		if err := d.publish(ctx, m); err != nil {
 			errs = multierror.Append(errs, err)
 			continue
@@ -124,7 +124,7 @@ func (d *defaultEventWriter) WriteRetry(ctx context.Context, msg *Message) error
 		return ErrEmptyMessage
 	}
 
-	msg.Id = d.Node.Broker.setDefaultMessageIdGenerator()()
+	msg.Id = d.Supervisor.Broker.setDefaultMessageIdGenerator()()
 	msg.Metadata.RedeliveryCount++
 	d.Header().Set(HeaderMessageRedeliveryCount, strconv.Itoa(msg.Metadata.RedeliveryCount))
 	return d.publish(ctx, msg)
@@ -134,7 +134,7 @@ func (d *defaultEventWriter) publish(ctx context.Context, msg *Message) error {
 	d.marshalMessage(msg)
 
 	backoffFactor := msg.Metadata.RedeliveryCount
-	if backoffFactor > d.Node.setDefaultMaxRetries() {
+	if backoffFactor > d.Supervisor.setDefaultMaxRetries() {
 		return ErrMessageRedeliveredTooMuch
 	}
 
@@ -162,8 +162,8 @@ func (d *defaultEventWriter) marshalMessage(msg *Message) {
 		}
 	}
 
-	if d.Node != nil {
-		msg.Source = d.Node.setDefaultSource()
-		msg.ContentType = d.Node.setDefaultContentType()
+	if d.Supervisor != nil {
+		msg.Source = d.Supervisor.setDefaultSource()
+		msg.ContentType = d.Supervisor.setDefaultContentType()
 	}
 }

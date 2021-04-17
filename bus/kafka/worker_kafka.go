@@ -12,7 +12,7 @@ import (
 
 type kafkaWorker struct {
 	id     int
-	parent *quark.Node
+	parent *quark.Supervisor
 	cfg    KafkaConfiguration
 
 	group       sarama.ConsumerGroup
@@ -24,7 +24,7 @@ func (k *kafkaWorker) SetID(i int) {
 	k.id = i
 }
 
-func (k *kafkaWorker) Parent() *quark.Node {
+func (k *kafkaWorker) Parent() *quark.Supervisor {
 	return k.parent
 }
 

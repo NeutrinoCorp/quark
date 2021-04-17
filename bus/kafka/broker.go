@@ -32,7 +32,7 @@ func NewKafkaBroker(cfg *sarama.Config, addrs ...string) *quark.Broker {
 }
 
 func newKafkaWorkerFactory(cfg KafkaConfiguration) quark.WorkerFactory {
-	return func(parent *quark.Node) quark.Worker {
+	return func(parent *quark.Supervisor) quark.Worker {
 		return &kafkaWorker{
 			id:     0,
 			parent: parent,

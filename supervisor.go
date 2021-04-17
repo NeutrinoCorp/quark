@@ -10,10 +10,10 @@ import (
 	"github.com/hashicorp/go-multierror"
 )
 
-// Node is a Consumer logical unit of work.
+// Supervisor is a Consumer logical unit of work. It acts as a Task scheduler for current jobs.
 //
 // Distributes blocking I/O operations into different goroutines to enable parallelism with fan-out mechanisms.
-type Node struct {
+type Supervisor struct {
 	Broker   *Broker
 	Consumer *Consumer
 
@@ -21,24 +21,24 @@ type Node struct {
 	runningWorkers *queue.Queue
 }
 
-func newNode(b *Broker, c *Consumer) *Node {
-	n := &Node{
+func newSupervisor(b *Broker, c *Consumer) *Supervisor {
+	s := &Supervisor{
 		Broker:         b,
 		Consumer:       c,
 		workers:        sync.Pool{},
 		runningWorkers: queue.New(),
 	}
-	n.workers = sync.Pool{
+	s.workers = sync.Pool{
 		New: func() interface{} {
-			return b.WorkerFactory(n) // returns a new worker when required
+			return b.WorkerFactory(s) // returns a new worker when required
 		},
 	}
 
-	return n
+	return s
 }
 
-// Consume starts consuming from the current Consumer parent
-func (n *Node) Consume(ctx context.Context) error {
+// ScheduleJobs starts the blocking I/O consuming operations from the current Consumer parent
+func (n *Supervisor) ScheduleJobs(ctx context.Context) error {
 	if err := n.ensureValidParams(); err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (n *Node) Consume(ctx context.Context) error {
 	return errs.ErrorOrNil()
 }
 
-func (n *Node) ensureValidParams() error {
+func (n *Supervisor) ensureValidParams() error {
 	if len(n.setDefaultCluster()) == 0 {
 		return ErrEmptyCluster
 	} else if len(n.Consumer.topics) == 0 {
@@ -76,8 +76,8 @@ func (n *Node) ensureValidParams() error {
 	return nil
 }
 
-// Close ends the current Node consuming session
-func (n *Node) Close() error {
+// Close ends the current Supervisor consuming session
+func (n *Supervisor) Close() error {
 	errs := new(multierror.Error)
 	runningLength := n.runningWorkers.Length() // allocate in a different memory address to avoid queue length mutation
 	for i := 0; i < runningLength; i++ {
@@ -90,56 +90,56 @@ func (n *Node) Close() error {
 	return errs.ErrorOrNil()
 }
 
-func (n *Node) setDefaultPoolSize() int {
+func (n *Supervisor) setDefaultPoolSize() int {
 	if n.Consumer.poolSize > 0 {
 		return n.Consumer.poolSize
 	}
 	return n.Broker.setDefaultPoolSize() // use global
 }
 
-func (n *Node) setDefaultMaxRetries() int {
+func (n *Supervisor) setDefaultMaxRetries() int {
 	if n.Consumer.maxRetries > 0 {
 		return n.Consumer.maxRetries
 	}
 	return n.Broker.setDefaultMaxRetries() // use global
 }
 
-func (n *Node) setDefaultRetryBackoff() time.Duration {
+func (n *Supervisor) setDefaultRetryBackoff() time.Duration {
 	if n.Consumer.retryBackoff > 0 {
 		return n.Consumer.retryBackoff
 	}
 	return n.Broker.setDefaultRetryBackoff() // use global
 }
 
-func (n *Node) setDefaultProvider() string {
+func (n *Supervisor) setDefaultProvider() string {
 	if provider := n.Consumer.provider; provider != "" {
 		return provider
 	}
 	return n.Broker.Provider // use global
 }
 
-func (n *Node) setDefaultProviderConfig() interface{} {
+func (n *Supervisor) setDefaultProviderConfig() interface{} {
 	if cfg := n.Consumer.providerConfig; cfg != nil {
 		return cfg
 	}
 	return n.Broker.ProviderConfig // use global
 }
 
-func (n *Node) setDefaultCluster() []string {
+func (n *Supervisor) setDefaultCluster() []string {
 	if cluster := n.Consumer.cluster; len(cluster) > 0 {
 		return cluster
 	}
 	return n.Broker.Cluster // use global
 }
 
-func (n *Node) setDefaultGroup() string {
+func (n *Supervisor) setDefaultGroup() string {
 	if group := n.Consumer.group; group != "" {
 		return group
 	}
 	return n.Consumer.TopicString() // use topics as default
 }
 
-func (n *Node) setDefaultPublisher() Publisher {
+func (n *Supervisor) setDefaultPublisher() Publisher {
 	if n.Consumer.publisher != nil {
 		return n.Consumer.publisher
 	}
@@ -147,7 +147,7 @@ func (n *Node) setDefaultPublisher() Publisher {
 	return n.Broker.Publisher
 }
 
-func (n *Node) setDefaultEventWriter() EventWriter {
+func (n *Supervisor) setDefaultEventWriter() EventWriter {
 	if n.Broker.EventWriter != nil {
 		return n.Broker.EventWriter
 	}
@@ -155,14 +155,14 @@ func (n *Node) setDefaultEventWriter() EventWriter {
 	return newEventWriter(n, n.setDefaultPublisher())
 }
 
-func (n *Node) setDefaultSource() string {
+func (n *Supervisor) setDefaultSource() string {
 	if s := n.Consumer.source; s != "" {
 		return s
 	}
 	return n.Broker.BaseMessageSource
 }
 
-func (n *Node) setDefaultContentType() string {
+func (n *Supervisor) setDefaultContentType() string {
 	if content := n.Consumer.contentType; content != "" {
 		return content
 	}
@@ -170,16 +170,16 @@ func (n *Node) setDefaultContentType() string {
 }
 
 // GetEventWriter retrieves the default event writer
-func (n *Node) GetEventWriter() EventWriter {
+func (n *Supervisor) GetEventWriter() EventWriter {
 	return n.setDefaultEventWriter()
 }
 
 // GetCluster retrieves the default cluster slice
-func (n *Node) GetCluster() []string {
+func (n *Supervisor) GetCluster() []string {
 	return n.setDefaultCluster()
 }
 
 // GetGroup retrieves the default consumer group
-func (n *Node) GetGroup() string {
+func (n *Supervisor) GetGroup() string {
 	return n.setDefaultGroup()
 }
