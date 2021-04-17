@@ -125,9 +125,8 @@ func (d *defaultEventWriter) WriteRetry(ctx context.Context, msg *Message) error
 	}
 
 	msg.Id = d.Node.Broker.setDefaultMessageIdGenerator()()
-	if d.header.Get(HeaderMessageRedeliveryCount) != "" {
-		msg.Metadata.RedeliveryCount++
-	}
+	msg.Metadata.RedeliveryCount++
+	d.Header().Set(HeaderMessageRedeliveryCount, strconv.Itoa(msg.Metadata.RedeliveryCount))
 	return d.publish(ctx, msg)
 }
 
@@ -166,6 +165,8 @@ func (d *defaultEventWriter) marshalMessage(msg *Message) {
 		}
 	}
 
-	msg.Source = d.Node.setDefaultSource()
-	msg.ContentType = d.Node.setDefaultContentType()
+	if d.Node != nil {
+		msg.Source = d.Node.setDefaultSource()
+		msg.ContentType = d.Node.setDefaultContentType()
+	}
 }

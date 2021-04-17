@@ -8,7 +8,7 @@ import (
 
 func TestFormatTopicName(t *testing.T) {
 	t.Run("Comply with Topic Async API specification", func(t *testing.T) {
-		correctName := "neutrino.payment.1.domain_event.user.paid"
+		correctName := "neutrino.payment.1.event.user.paid"
 		topic := FormatTopicName("neutrino", "payment", DomainEvent, "user", "paid", 1)
 		assert.Equal(t, correctName, topic)
 	})

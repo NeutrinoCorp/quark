@@ -141,8 +141,8 @@ type stubPublisher struct {
 
 var errStubPublisher = errors.New("generic stub publisher error")
 
-func (a stubPublisher) Publish(context.Context, ...*Message) error {
-	if a.fail {
+func (p stubPublisher) Publish(context.Context, ...*Message) error {
+	if p.fail {
 		return errStubPublisher
 	}
 	return nil
