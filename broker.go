@@ -25,8 +25,8 @@ type Broker struct {
 	ConnRetries      int
 	ConnRetryBackoff time.Duration
 
-	MessageIdGenerator func() string
-	WorkerFactory      WorkerFactory
+	MessageIDFactory IDFactory
+	WorkerFactory    WorkerFactory
 
 	// BaseMessageSource is the default Source of a Message based on the CNCF CloudEvents specification v1
 	//
@@ -242,8 +242,8 @@ func (b *Broker) setDefaultConnRetryBackoff() time.Duration {
 }
 
 func (b *Broker) setDefaultMessageIDFactory() IDFactory {
-	if b.MessageIdGenerator != nil {
-		return b.MessageIdGenerator
+	if b.MessageIDFactory != nil {
+		return b.MessageIDFactory
 	}
 	return defaultIDFactory
 }
