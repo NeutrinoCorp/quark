@@ -10,7 +10,7 @@ More in deep, `Quark` _fans-out processes per-consumer to_ **parallelize blockin
 
 Furthermore, `Quark` uses the _[Cloud Native Computing Foundation (CNCF) CloudEvents](https://cloudevents.io/)_ specification to compose messages. `Quark` lets developers use their preferred encoding format _(JSON, Apache Avro, etc.)_ and sets message headers as binary data when possible to reduce computational costs.
 
-Aside basic functionalities, it is worth to mention `Quark` is **_fully customizable_** at any level _(Broker or Consumer)_, so any developer may get the maximum potential out of `Quark`. 
+Aside basic functionalities, it is worth to mention `Quark` is **_fully customizable_**, so any developer may get the maximum potential out of `Quark`. 
 
 A simple set of examples would be:
 - Override the default Event Writer to apply custom resilience mechanisms.
@@ -65,14 +65,15 @@ customErrHandler := func(ctx context.Context, err error) {
 
 // Create broker
 b := kafka.NewKafkaBroker(
-		newSaramaCfg(),
-		quark.WithCluster("localhost:9092", "localhost:9093"),
-		quark.WithBaseMessageSource("https://neutrinocorp.org/cloudevents"),
-		quark.WithBaseMessageContentType("application/cloudevents+json"),
-		quark.WithErrorHandler(customErrHandler))
+	// ... A Shopify/sarama configuration,
+	quark.WithCluster("localhost:9092", "localhost:9093"),
+	quark.WithBaseMessageSource("https://neutrinocorp.org/cloudevents"),
+	quark.WithBaseMessageContentType("application/cloudevents+json"),
+	quark.WithErrorHandler(customErrHandler))
 ```
 
 Quark is very straight forward as is based on the `net/http` and well known Go HTTP mux packages.
+
 This example demonstrates how to listen to a Topic using the `Broker.Topic()` method.
 
 If no pool-size was specified, `Quark` will set up to 5 `workers` for each Consumer.
@@ -87,7 +88,7 @@ b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 
 Quark parallelize message-processing jobs by creating a pool of `Worker(s)` for each Consumer using goroutines.
 
-The pool size can be defined to an specific Consumer calling the `Consumer.PoolSize()` method.
+The pool size can be defined to an specific Consumer calling the `quark.WithPoolSize()/Consumer.PoolSize()` method/function.
 
 ```go
 b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
@@ -98,7 +99,7 @@ b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Eve
 
 Quark is based on _reliable mechanisms_ such as _retry-exponential+jitter_ backoff and sending _poison messages_ to Dead-Letter Queues (DLQ) strategies.
 
-To customize these mechanisms, the developer may use the `Consumer.MaxRetries()` and `Consumer.RetryBackoff()` methods.
+To customize these mechanisms, the developer may use the `quark.WithMaxRetries()/Consumer.MaxRetries()` and `quark.WithRetryBackoff()/Consumer.RetryBackoff()` methods/functions.
 
 _These strategies are implemented by default on the `defaultEventWriter` component._
 
@@ -118,17 +119,16 @@ If a message processing fails, `Quark` will use _**Acknowledgement**_ mechanisms
 
 This can be done by sending a `false` value from the event handler.
 
-_Only available for specific providers_
+_* Only available for specific providers._
 
 ```go
 b.Topic("cosmos.user_registered").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
   // ...
-  
   return true // this indicates if the consumer should mark the message or not (Ack or NAck)
 })
 ```
 
-To conclude, after setting up all of our consumers, we must start the `Broker` up to trigger and rise all the registered `Consumer(s)`.
+To conclude, after setting up all of our consumers, the developer must start the `Broker` component to execute background jobs from registered `Consumer(s)`.
 
 Don't forget to graceful shutdown as if you were shutting down a `net/http` server.
 
@@ -155,62 +155,65 @@ if err := b.Shutdown(ctx); err != nil {
 log.Print(b.ActiveSupervisors(), b.ActiveWorkers()) // should be 0,0
 ```
 
-### Advanced techniques
+## Advanced techniques
 
-**Grouping consumer nodes**
+### Grouping Consumer jobs
 
-One might want to take advantage of specific features like _Apache Kafka's_ `Consumer Group` as this might help to process messages one-at-the-time.
+When processing in parallel, every Worker in a Consumer pool will read from a Queue/Offset independently.
 
-This can be done using the default `mux` by setting the `Group` attribute.
+Even though this is intended by Quark, the developer might want to balance processing load from the Worker(s) by treating the Consumer pool as a whole.
 
-By default, Quark uses `Partition Consumer` when using Apache Kafka.
+This can be done calling the `Consumer.Group()` method.
+
+_* Only available for specific providers (e.g. Apache Kafka)._
 
 ```go
 b.Topic("chat.1").Group("awesome-group").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
   log.Print(e.Topic, e.RawValue)
-  // publish messages to given topics
-  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
+  // ...
   return true
 })
 ```
 
-**Fanning-in messages/queues into a single consumer**
+### Fanning-in Topics into a single Consumer
 
-The following example demonstrates how to do the current case using the `mux` and the `Topics` function.
+A Quark Consumer accepts up to N topics by default.
 
-_When fan-in is configured, the `Consumer` must be inside a `Group`_
+This feature can be implemented by calling the `Consumer.Topics()` method.
 
 ```go
-b.Topics("chat.0", "chat.1").Group("chat-group").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+b.Topics("chat.0", "chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
   log.Print(e.Topic, e.RawValue)
-  // publish messages to given topics
-  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
+  // ...
   return true
 })
 ```
 
-**Custom publisher per-consumer**
+### Using a different Publisher for a Consumer process
 
-Say you were listening topics from Kafka, yet you want to publish the output into AWS SNS instead Kafka (specified in the global configuration).
+As part of the _fully customizable_ principle, a Quark Consumer may use a different Publisher component if desired.
 
-The following example demonstrates how to tackle the previous scenario with Quark.
-
-Therefore, the use of `Group` is crucial here since `Partition Consumer` is treated as single unit of processing, and it would publish the message N-times (the pool size since `Consumer` workers are running in parallel).
+This feature can be implemented by using a different provider `Publisher` implementation and by calling the `Consumer.Publisher()` method.
 
 ```go
-type AWSPublisher struct{}
+// on quark/bus/aws package
 
-func (a AWSPublisher) Publish(ctx context.Context, msgs ...*quark.Message) error {
-	for _, msg := range msgs {
-		log.Printf("publishing - message: %s", msg.Kind)
-	}
+type SNSPublisher struct{}
+
+func (a SNSPublisher) Publish(ctx context.Context, msgs ...*quark.Message) error {
+	// ...
 	return nil
 }
 
+// on developer application
+
 // ...
 
-b.Topic("alex.trades").Group("alex.trades").Publisher(AWSPublisher{}).
+// Listening from Google Cloud Platform Pub/Sub
+
+b.Topic("alex.trades").Publisher(aws.SNSPublisher{}).
   HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+    // Write() will publish the message to Amazon Web Services Simple Notification Service (SNS)
     _, _ = w.Write(e.Context, []byte("alex has traded in a new index fund"),
       "aws.alex.trades", "aws.analytics.trades")
     return true
@@ -221,8 +224,8 @@ See the [documentation][doc], [examples][examples] and [FAQ](FAQ.md) for more de
 
 ## Performance
 
-As measured by its own [benchmarking suite][], not only is quark more performant
-than comparable messaging processors packages. Like all benchmarks, take these with a grain of salt.<sup
+As measured by its own [benchmarking suite][benchmarking_suite], not only is `Quark` more performant
+than comparable messaging processing packages. Like all benchmarks, take these with a grain of salt.<sup
 id="anchor-versions">[1](#footnote-versions)</sup>
 
 ## Maintenance
@@ -231,17 +234,17 @@ This library is currently maintained by
 
 ## Development Status: Alpha
 
-All APIs are under development, breaking changes will be made in the 0.x.x series
+All APIs are under development, yet no breaking changes will be made in the 1.x.x series
 of releases. Users of semver-aware dependency management systems should pin
-quark to `^1`.
+`Quark` to `^1`.
 
 ## Contributing
 
 We encourage and support an active, healthy community of contributors &mdash;
 including you! Details are in the [contribution guide](CONTRIBUTING.md) and
-the [code of conduct](CODE_OF_CONDUCT.md). The quark maintainers keep an eye on
+the [code of conduct](CODE_OF_CONDUCT.md). The Quark maintainers keep an eye on
 issues and pull requests, but you can also report any negative conduct to
-oss-conduct@neutrinocorp.org. That email list is a private, safe space; even the zap
+**oss-conduct@neutrinocorp.org**. That email list is a private, safe space; even the Quark
 maintainers don't have access, so don't hesitate to hold us to a high
 standard.
 
@@ -268,6 +271,6 @@ pinned in the [benchmarks/go.mod][] file. [↩](#anchor-versions)
 [beat-img]: https://codebeat.co/badges/416103dd-8b2a-463e-83fb-5c438c2565ac
 [beat]: https://codebeat.co/projects/github-com-neutrinocorp-quark-master
 [cov]: https://codecov.io/gh/NeutrinoCorp/quark
-[benchmarking suite]: https://github.com/neutrinocrp/quark/tree/master/benchmarks
+[benchmarking_suite]: https://github.com/neutrinocrp/quark/tree/master/benchmarks
 [benchmarks/go.mod]: https://github.com/neutrinocorp/quark/blob/master/benchmarks/go.mod
 [maintainer]: https://github.com/maestre3d
