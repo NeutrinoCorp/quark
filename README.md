@@ -1,12 +1,10 @@
 # :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Report Status][rep-img]][rep] [![Codebeat][beat-img]][beat] [![Go Version][go-img]][go]
-A Reliable Router for Event-Driven ecosystems written in Go.
+A **_Reliable_** and **_fully customizable_** **Event Router** for Event-Driven systems written in Go.
 
 Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/), 
 `Quark` offers an Event Router with a fine-tuned set of tools to ease messaging communication complexity.
 
-Thread-safe processing, parallelism, concurrency and graceful shutdowns are elemental components of `Quark`.
-
-More in deep, `Quark` _fans-out processes per-consumer to_ **parallelize blocking I/O** _tasks_ (as consuming from a queue/topic would be).
+Thread-safe processing, parallelism, concurrency and graceful shutdowns are the elemental principles of `Quark`.
 
 Furthermore, `Quark` uses the _[Cloud Native Computing Foundation (CNCF) CloudEvents](https://cloudevents.io/)_ specification to compose messages. `Quark` lets developers use their preferred encoding format _(JSON, Apache Avro, etc.)_ and sets message headers as binary data when possible to reduce computational costs.
 
