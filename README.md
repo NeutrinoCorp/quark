@@ -70,6 +70,8 @@ b := kafka.NewKafkaBroker(
 	quark.WithErrorHandler(customErrHandler))
 ```
 
+### Listen to a Topic
+
 Quark is very straight forward as is based on the `net/http` and well known Go HTTP mux packages.
 
 This example demonstrates how to listen to a Topic using the `Broker.Topic()` method.
@@ -84,6 +86,8 @@ b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 })
 ```
 
+### Increase Worker pool for a Consumer process
+
 Quark parallelize message-processing jobs by creating a pool of `Worker(s)` for each Consumer using goroutines.
 
 The pool size can be defined to an specific Consumer calling the `quark.WithPoolSize()/Consumer.PoolSize()` method/function.
@@ -94,6 +98,8 @@ b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Eve
   return true
 })
 ```
+
+### Retry an event process
 
 Quark is based on _reliable mechanisms_ such as _retry-exponential+jitter_ backoff and sending _poison messages_ to Dead-Letter Queues (DLQ) strategies.
 
@@ -113,6 +119,8 @@ b.Topic("cosmos.payments").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(
 })
 ```
 
+### Failed event processing
+
 If a message processing fails, `Quark` will use _**Acknowledgement**_ mechanisms if available.
 
 This can be done by sending a `false` value from the event handler.
@@ -126,9 +134,11 @@ b.Topic("cosmos.user_registered").HandleFunc(func(w quark.EventWriter, e *quark.
 })
 ```
 
+### Start Broker and Graceful Shutdown
+
 To conclude, after setting up all of our consumers, the developer must start the `Broker` component to execute background jobs from registered `Consumer(s)`.
 
-Don't forget to graceful shutdown as if you were shutting down a `net/http` server.
+The developer should not forget to shutdown gracefully the `Broker` _-like an `net/http` server-_.
 
 ```go
 // graceful shutdown
