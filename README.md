@@ -219,7 +219,7 @@ b.Topics("chat.0", "chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event
 
 Like HTTP, Quark defines a set of headers for each Event and decodes/encodes them by default.
 
-These headers may contain useful metadata from the current Broker, Consumer and provider (e.g. an Apache Kafka Offset or Partition).
+These headers may contain useful metadata from the current Broker, Consumer, provider (e.g. an Apache Kafka Offset or Partition) and/or Message (CloudEvents attributes).
 
 Moreover, Quark lets developers read or manipulate these headers. Thus, modified headers will be published when EventWriter's Write methods are called.
 
