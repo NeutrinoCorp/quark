@@ -80,13 +80,31 @@ If no pool-size was specified, `Quark` will set up to 5 `workers` for each Consu
 
 ```go
 b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  // publish messages to given topics
-  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3") // returns how many messages were published
+  // ...
   return true
 })
 ```
 
-### Increase Worker pool for a Consumer process
+### Publish to Topic(s)
+
+Internally, Quark uses the `EventWriter` and `Publisher` components to propagate an event into the provider infrastructure.
+
+Moreover, Quark lets developers publish a message to multiple Topics (fan-out).
+
+This can be done by calling the `EventWriter's Write()/WriteMessage()` methods.
+
+```go
+b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+  // ...
+  _, _ = w.Write(e.Context, encodedMsgBody, "chat.2", "chat.3") // returns how many messages were published
+  // or
+  // msg is a quark.Message struct, writer will use Message.Type/Topic attribute to publish
+  _, _ = w.WriteMessage(e.Context, msgA, msgB)
+  return true
+})
+```
+
+### Increase/Decrease Worker pool for a Consumer process
 
 Quark parallelize message-processing jobs by creating a pool of `Worker(s)` for each Consumer using goroutines.
 
@@ -123,7 +141,7 @@ b.Topic("cosmos.payments").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(
 
 If a message processing fails, `Quark` will use _**Acknowledgement**_ mechanisms if available.
 
-This can be done by sending a `false` value from the event handler.
+This can be done by returning a `false` value from the event handler.
 
 _* Only available for specific providers._
 
@@ -183,7 +201,7 @@ b.Topic("chat.1").Group("awesome-group").HandleFunc(func(w quark.EventWriter, e 
 })
 ```
 
-### Fanning-in Topics into a single Consumer
+### Listening N-Topics within a single Consumer (Fan-in)
 
 A Quark Consumer accepts up to N topics by default.
 
@@ -193,6 +211,26 @@ This feature can be implemented by calling the `Consumer.Topics()` method.
 b.Topics("chat.0", "chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
   log.Print(e.Topic, e.RawValue)
   // ...
+  return true
+})
+```
+
+### Event header read and manipulation
+
+Like HTTP, Quark defines a set of headers for each Event and decodes/encodes them by default.
+
+These headers may contain useful metadata from the current Broker, Consumer and provider (e.g. an Apache Kafka Offset or Partition).
+
+Moreover, Quark lets developers read or manipulate these headers. Thus, modified headers will be published when EventWriter's Write methods are called.
+
+This can be done by calling the `EventWriter.Get()` and `EventWriter.Set()` methods.
+
+```go
+b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+  // ...
+  partition := w.Header().Get(kafka.HeaderKafkaPartition)
+  w.Header().Set(quark.HeaderMessageDataContentType, "application/avro")
+  _, _ = w.Write(e.Context, e.Body.Data, "dlq.chat.1") // will use new Content-Type header
   return true
 })
 ```
