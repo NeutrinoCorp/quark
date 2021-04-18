@@ -1,24 +1,52 @@
 # :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Report Status][rep-img]][rep] [![Codebeat][beat-img]][beat] [![Go Version][go-img]][go]
-Reliable Event-Driven mechanisms for reactive ecosystems written in Go.
+A Reliable Router for Event-Driven ecosystems written in Go.
 
 Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/), 
-Quark offers a fine-tuned set of tools to ease overall complexity when distributed message processing is required.
+Quark offers an Event Router with a fine-tuned set of tools to ease overall complexity when distributed message processing is required.
 
-In Addition, `Quark` _fans-out processes per-consumer to_ **parallelize blocking I/O** _tasks_ (as consuming from a queue/topic would be) and isolate them. Thread-safe processing and graceful shutdown are a very important part of Quark.
+Thread-safe processing, parallelism, concurrency and graceful shutdowns are elemental components of `Quark`.
 
-Furthermore, `Quark` stores specific data _(e.g. event id, correlation id, span context, etc)_ into messages headers in a binary format to ease disk consumption on the infrastructure. Furthermore, `Quark` lets users use their own encoding preferred library. _(JSON, Apache Avro, etc.)_
+More in deep, `Quark` _fans-out processes per-consumer to_ **parallelize blocking I/O** _tasks_ (as consuming from a queue/topic would be).
 
-Therefore, `Quark` lets developers take advantage of those mechanisms with its default configuration and a `gorilla/mux`-like router/mux mechasisms to keep them in ease and get benefits without complex configurations and handling. You can either choose use _global configurations_ specified in the broker or use an _specific configuration_ for a specific consumer.
+Furthermore, `Quark` uses the _[Cloud Native Computing Foundation (CNCF) CloudEvents](https://cloudevents.io/)_ specification to compose messages. `Quark` lets developers use their preferred encoding format _(JSON, Apache Avro, etc.)_ and sets message headers as binary data when possible to reduce computational costs.
 
-Finally, `Quark` exposes a friendly API based on the `net/http` and popular mux (such as `gorilla/mux`) package to increase overall usability and productivity.
+Aside basic functionalities, it is worth to mention `Quark` is **_fully customizable_** at any level _(Broker or Consumer)_, so any developer may get the maximum potential out of `Quark`. 
 
-_We currently offer Apache Kafka and Amazon Web Services SNS/SQS implementations. Therefore, we will be adding more implementations such as Google Cloud PubSub, Amazon Web Services Event Bridge, RabbitMQ and NATS in a very near future._
+A simple set of examples would be:
+- Override the default Event Writer to apply custom resilience mechanisms.
+- Increasing a Worker pool size for an specific Consumer process.
+- Override the default Publisher (e.g. Apache Kafka) for another provider Publisher (e.g. AWS SNS).
+
+To conclude, `Quark` exposes a friendly API based on Go's idiomatic best practices and the `net/http` + popular HTTP mux (`gorilla/mux`, `gin-gonic/gin`, `labstack/echo`) packages to increase overall usability and productivity.
+
+## Supported Infrastructure
+- Apache Kafka
+- In Memory*
+- Redis Pub/Sub*
+- Amazon Web Services Simple Queue Service (SQS)*
+- Amazon Web Services Simple Notification Service (SNS)*
+- Amazon Web Services Kinesis*
+- Amazon Web Services Event Bridge*
+- Google Cloud Pub/Sub*
+- Microsoft Azure Service Bus*
+- NATS*
+- RabbitMQ*
+
+_* to be implemented_
 
 ## Installation
 
+Since `Quark` uses Go submodules to decompose specific depenencies for providers, it is required to install concrete implementations _(Apache Kafka, In memory, Redis, ...)_ manually. One may install these using the following command.
+
+_One may use this single command, `Quark` core_
+
+`go get github.com/neutrinocorp/quark/bus/YOUR_PROVIDER`
+
+If one wants to develop its own custom implementations, it is required to install `Quark` core library. It can be done running the following command.
+
 `go get github.com/neutrinocorp/quark`
 
-Note that quark only supports the two most recent minor versions of Go.
+_Note that `Quark` only supports the two most recent minor versions of Go._
 
 ## Quick Start
 
@@ -182,10 +210,6 @@ See the [documentation][doc], [examples][examples] and [FAQ](FAQ.md) for more de
 As measured by its own [benchmarking suite][], not only is quark more performant
 than comparable messaging processors packages. Like all benchmarks, take these with a grain of salt.<sup
 id="anchor-versions">[1](#footnote-versions)</sup>
-
-## Supported Infrastructure
-- Apache Kafka
-- Amazon Web Services SNS and SQS (Separated or using both)
 
 ## Maintenance
 This library is currently maintained by
