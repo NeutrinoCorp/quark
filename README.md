@@ -195,7 +195,6 @@ _* Only available for specific providers (e.g. Apache Kafka)._
 
 ```go
 b.Topic("chat.1").Group("awesome-group").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  log.Print(e.Topic, e.RawValue)
   // ...
   return true
 })
@@ -209,7 +208,6 @@ This feature can be implemented by calling the `Consumer.Topics()` method.
 
 ```go
 b.Topics("chat.0", "chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  log.Print(e.Topic, e.RawValue)
   // ...
   return true
 })
@@ -223,7 +221,7 @@ These headers may contain useful metadata from the current Broker, Consumer, pro
 
 Moreover, Quark lets developers read or manipulate these headers. Thus, modified headers will be published when EventWriter's Write methods are called.
 
-This can be done by calling the `EventWriter.Get()` and `EventWriter.Set()` methods.
+This can be done by calling the `EventWriter.Header().Get()` and `EventWriter.Header().Set()` methods.
 
 ```go
 b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
