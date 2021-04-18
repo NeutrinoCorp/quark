@@ -2,7 +2,7 @@
 A Reliable Router for Event-Driven ecosystems written in Go.
 
 Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/), 
-Quark offers an Event Router with a fine-tuned set of tools to ease overall complexity when distributed message processing is required.
+`Quark` offers an Event Router with a fine-tuned set of tools to ease messaging communication complexity.
 
 Thread-safe processing, parallelism, concurrency and graceful shutdowns are elemental components of `Quark`.
 
@@ -16,8 +16,11 @@ A simple set of examples would be:
 - Override the default Event Writer to apply custom resilience mechanisms.
 - Increasing a Worker pool size for an specific Consumer process.
 - Override the default Publisher (e.g. Apache Kafka) for another provider Publisher (e.g. AWS SNS).
+- Set a tracing context as custom Message header to trace an specific event process.
 
 To conclude, `Quark` exposes a friendly API based on Go's idiomatic best practices and the `net/http` + popular HTTP mux (`gorilla/mux`, `gin-gonic/gin`, `labstack/echo`) packages to increase overall usability and productivity.
+
+_More information about the internal low-level architecture may be found [here][quark-arch]._
 
 ## Supported Infrastructure
 - Apache Kafka
@@ -26,8 +29,8 @@ To conclude, `Quark` exposes a friendly API based on Go's idiomatic best practic
 - Amazon Web Services Simple Queue Service (SQS)*
 - Amazon Web Services Simple Notification Service (SNS)*
 - Amazon Web Services Kinesis*
-- Amazon Web Services Event Bridge*
-- Google Cloud Pub/Sub*
+- Amazon Web Services EventBridge*
+- Google Cloud Platform Pub/Sub*
 - Microsoft Azure Service Bus*
 - NATS*
 - RabbitMQ*
@@ -37,8 +40,6 @@ _* to be implemented_
 ## Installation
 
 Since `Quark` uses Go submodules to decompose specific depenencies for providers, it is required to install concrete implementations _(Apache Kafka, In memory, Redis, ...)_ manually. One may install these using the following command.
-
-_One may use this single command, `Quark` core_
 
 `go get github.com/neutrinocorp/quark/bus/YOUR_PROVIDER`
 
@@ -54,91 +55,104 @@ Before we set up our consumers, we must define our `Broker` and its required con
 
 The following example demonstrates how to set up an _Apache Kafka_ `Broker` with an error handler (hook).
 
-_When using Apache Kafka, `Shopify/sarama` package is required as we rely on its mechanisms._
-
 ```go
-// Create broker
-b := quark.NewKafkaBroker(newSaramaCfg(), "localhost:9092")
-
-b.ErrorHandler = func(ctx context.Context, err error) {
+// Create error hook
+customErrHandler := func(ctx context.Context, err error) {
   log.Print(err)
 }
+
+// ...
+
+// Create broker
+b := kafka.NewKafkaBroker(
+		newSaramaCfg(),
+		quark.WithCluster("localhost:9092", "localhost:9093"),
+		quark.WithBaseMessageSource("https://neutrinocorp.org/cloudevents"),
+		quark.WithBaseMessageContentType("application/cloudevents+json"),
+		quark.WithErrorHandler(customErrHandler))
 ```
 
-Quark is very straight forward as is based on the `net/http` and `gorilla/mux` packages.
-This example demonstrates how to listen to an asynchronous topic using the `Topic` function.
+Quark is very straight forward as is based on the `net/http` and well known Go HTTP mux packages.
+This example demonstrates how to listen to a Topic using the `Broker.Topic()` method.
 
-If no pool-size was specified, `Quark` will set up to 5 `workers` per-consumer node.
+If no pool-size was specified, `Quark` will set up to 5 `workers` for each Consumer.
 
 ```go
 b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  log.Print(e.Topic, e.RawValue)
   // publish messages to given topics
   _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3") // returns how many messages were published
-  return true // this indicates if the consumer should mark the message or not (Ack or NAck)
-})
-```
-
-Quark parallelize consumers tasks into a pool of `workers` using goroutines and executes a graceful shutdown by default. 
-
-The pool size can be defined by the user with a `PoolSize` attribute.
-
-```go
-b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  log.Print(e.Topic, e.RawValue)
-  // publish messages to given topics
-  _, _ = w.Write(e.Context, e.RawValue, "chat.2", "chat.3")
   return true
 })
 ```
 
-Quark is based on _reliable mechanisms_. To make use of them, one needs to specify on either the `Broker` or on a specific topic.
+Quark parallelize message-processing jobs by creating a pool of `Worker(s)` for each Consumer using goroutines.
 
-This method relies on `defaultEventWriter` as it contains preconfigured reliable mechanisms to avoid message loops and more functionalities.
+The pool size can be defined to an specific Consumer calling the `Consumer.PoolSize()` method.
+
+```go
+b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+  // ...
+  return true
+})
+```
+
+Quark is based on _reliable mechanisms_ such as _retry-exponential+jitter_ backoff and sending _poison messages_ to Dead-Letter Queues (DLQ) strategies.
+
+To customize these mechanisms, the developer may use the `Consumer.MaxRetries()` and `Consumer.RetryBackoff()` methods.
+
+_These strategies are implemented by default on the `defaultEventWriter` component._
 
 ```go
 b.Topic("cosmos.payments").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
   // ... something failed in our processing
-  if e.Body.Metadata.RedeliveryCount > 3 {
-  	// executed if our message has been processed too much, send to Dead Letter Queue
-  	w.Header().Set(quark.HeaderMessageRedeliveryCount, 0)
-  	_, _ = w.Write(e.Context, e.RawValue, "dlq.cosmos.payment")
-	return true
+  err := w.WriteRetry(e.Context, e.Body)
+  if errors.Is(err, quark.ErrMessageRedeliveredTooMuch) {
+       	// calling Write() will set the Message re-delivery delta to 0
+	_, _ = w.Write(e.Context, e.Body.Data, "dlq.chat.1")
   }
-  
-  // publish messages to retry queue, message loop will be avoided by defaultEventWriter
-  e.Body.Metadata.RedeliveryCount++
-  w.Header().Set(quark.HeaderMessageRedeliveryCount, strconv.Itoa(e.Body.Metadata.RedeliveryCount))
-  _, _ = w.Write(e.Context, e.RawValue, "retry.cosmos.payment")
   return true
 })
 ```
 
-To conclude, after setting up all of our consumers, we must start the `Broker` up to trigger and rise all the specified `Consumer`.
+If a message processing fails, `Quark` will use _**Acknowledgement**_ mechanisms if available.
+
+This can be done by sending a `false` value from the event handler.
+
+_Only available for specific providers_
+
+```go
+b.Topic("cosmos.user_registered").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+  // ...
+  
+  return true // this indicates if the consumer should mark the message or not (Ack or NAck)
+})
+```
+
+To conclude, after setting up all of our consumers, we must start the `Broker` up to trigger and rise all the registered `Consumer(s)`.
 
 Don't forget to graceful shutdown as if you were shutting down a `net/http` server.
 
 ```go
 // graceful shutdown
-stop := make(chan os.Signal)
+stop := make(chan os.Signal, 1)
 signal.Notify(stop, os.Interrupt)
 go func() {
-  if err = b.ListenAndServe(); err != nil && err != quark.ErrBrokerClosed {
-    log.Fatal(err)
-  }
+	if err := b.ListenAndServe(); err != nil && err != quark.ErrBrokerClosed {
+		log.Fatal(err)
+	}
 }()
 
 <-stop
 
-log.Printf("stopping %d nodes and %d workers", b.RunningNodes(), b.RunningWorkers())
+log.Printf("stopping %d supervisor(s) and %d worker(s)", b.ActiveSupervisors(), b.ActiveWorkers())
 ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 defer cancel()
 
-if err = b.Shutdown(ctx); err != nil {
-  log.Fatal(err)
+if err := b.Shutdown(ctx); err != nil {
+	log.Fatal(err)
 }
 
-log.Print(b.RunningNodes(), b.RunningWorkers()) // should be 0,0
+log.Print(b.ActiveSupervisors(), b.ActiveWorkers()) // should be 0,0
 ```
 
 ### Advanced techniques
@@ -243,6 +257,7 @@ pinned in the [benchmarks/go.mod][] file. [↩](#anchor-versions)
 [examples]: https://github.com/neutrinocorp/quark/tree/master/examples
 [doc]: https://pkg.go.dev/github.com/neutrinocorp/quark
 [docs]: https://github.com/neutrinocorp/quark/tree/master/docs
+[quark-arch]: https://github.com/neutrinocorp/quark/tree/master/docs/quark-arch.png
 [ci-img]: https://github.com/neutrinocorp/quark/workflows/Go/badge.svg?branch=master
 [ci]: https://github.com/NeutrinoCorp/quark/actions
 [go-img]: https://img.shields.io/github/go-mod/go-version/NeutrinoCorp/quark?style=square
