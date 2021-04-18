@@ -104,26 +104,13 @@ b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 })
 ```
 
-### Increase/Decrease Worker pool for a Consumer process
-
-Quark parallelize message-processing jobs by creating a pool of `Worker(s)` for each Consumer using goroutines.
-
-The pool size can be defined to an specific Consumer calling the `quark.WithPoolSize()/Consumer.PoolSize()` method/function.
-
-```go
-b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
-  // ...
-  return true
-})
-```
-
 ### Retry an event process
 
 Quark is based on _reliable mechanisms_ such as _retry-exponential+jitter_ backoff and sending _poison messages_ to Dead-Letter Queues (DLQ) strategies.
 
-To customize these mechanisms, the developer may use the `quark.WithMaxRetries()/Consumer.MaxRetries()` and `quark.WithRetryBackoff()/Consumer.RetryBackoff()` methods/functions.
+This can be done by calling the `EventWriter.WriteRetry()` method.
 
-_These strategies are implemented by default on the `defaultEventWriter` component._
+To customize these mechanisms, the developer may use the `quark.WithMaxRetries()/Consumer.MaxRetries()` and `quark.WithRetryBackoff()/Consumer.RetryBackoff()` methods/functions.
 
 ```go
 b.Topic("cosmos.payments").MaxRetries(3).RetryBackoff(time.Second*3).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
@@ -182,6 +169,19 @@ log.Print(b.ActiveSupervisors(), b.ActiveWorkers()) // should be 0,0
 ```
 
 ## Advanced techniques
+
+### Increase/Decrease Worker pool for a Consumer process
+
+Quark parallelize message-processing jobs by creating a pool of `Worker(s)` for each Consumer using goroutines.
+
+The pool size can be defined to an specific Consumer calling the `quark.WithPoolSize()/Consumer.PoolSize()` method/function.
+
+```go
+b.Topic("chat.1").PoolSize(10).HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
+  // ...
+  return true
+})
+```
 
 ### Grouping Consumer jobs
 
