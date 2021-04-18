@@ -12,10 +12,9 @@ import (
 //
 // Administrates Consumer(s) supervisors and their workers wrapped with well-known concurrency and resiliency patterns.
 type Broker struct {
-	Provider         string
 	ProviderConfig   interface{}
 	Cluster          []string
-	ErrorHandler     func(context.Context, error)
+	ErrorHandler     ErrorHandler
 	Publisher        Publisher
 	EventMux         EventMux
 	EventWriter      EventWriter
@@ -45,12 +44,12 @@ type Broker struct {
 
 	BaseContext context.Context
 
-	supervisors    map[int]*Supervisor
-	runningNodes   int
-	runningWorkers int
-	mu             sync.Mutex
-	inShutdown     atomicBool
-	doneChan       chan struct{}
+	supervisors       map[int]*Supervisor
+	activeSupervisors int
+	activeWorkers     int
+	mu                sync.Mutex
+	inShutdown        atomicBool
+	doneChan          chan struct{}
 }
 
 var (
@@ -63,19 +62,47 @@ var (
 )
 
 // NewBroker allocates and returns a Broker
-func NewBroker(provider string, config interface{}) *Broker {
+func NewBroker(opts ...Option) *Broker {
+	options := newDefaultOptions()
+	for _, o := range opts {
+		o.apply(&options)
+	}
+
 	return &Broker{
-		Provider:       provider,
-		ProviderConfig: config,
-		Cluster:        make([]string, 0),
-		ErrorHandler:   nil,
-		Publisher:      nil,
-		EventMux:       nil,
-		EventWriter:    nil,
-		supervisors:    make(map[int]*Supervisor),
-		mu:             sync.Mutex{},
-		inShutdown:     0,
-		doneChan:       nil,
+		ProviderConfig:         options.providerConfig,
+		Cluster:                options.cluster,
+		ErrorHandler:           options.errHandler,
+		Publisher:              options.publisher,
+		EventMux:               options.eventMux,
+		EventWriter:            options.eventWriter,
+		PoolSize:               options.poolSize,
+		MaxRetries:             options.maxRetries,
+		ConnRetries:            options.maxConnRetries,
+		RetryBackoff:           options.retryBackoff,
+		ConnRetryBackoff:       options.connRetryBackoff,
+		MessageIDFactory:       options.messageIDFactory,
+		WorkerFactory:          options.workerFactory,
+		BaseMessageSource:      options.baseMessageSource,
+		BaseMessageContentType: options.baseMessageContentType,
+		BaseContext:            options.baseContext,
+		supervisors:            make(map[int]*Supervisor),
+		mu:                     sync.Mutex{},
+		inShutdown:             0,
+		doneChan:               nil,
+	}
+}
+
+// newDefaultOptions sets required default values for Broker's ops
+func newDefaultOptions() options {
+	return options{
+		cluster:          make([]string, 0),
+		eventMux:         NewMux(),
+		poolSize:         defaultPoolSize,
+		maxRetries:       defaultMaxRetries,
+		maxConnRetries:   defaultConnRetries,
+		retryBackoff:     defaultRetryBackoff,
+		connRetryBackoff: defaultConnRetryBackoff,
+		messageIDFactory: defaultIDFactory,
 	}
 }
 
@@ -94,7 +121,7 @@ func (b *Broker) Serve() error {
 			b.BaseContext = context.Background()
 		}
 		b.setDefaultMux()
-		if err := b.startNodes(b.BaseContext); err != nil {
+		if err := b.startSupervisors(b.BaseContext); err != nil {
 			return err
 		}
 
@@ -103,7 +130,7 @@ func (b *Broker) Serve() error {
 	}
 }
 
-func (b *Broker) startNodes(ctx context.Context) error {
+func (b *Broker) startSupervisors(ctx context.Context) error {
 	for _, consumers := range b.EventMux.List() {
 		for _, c := range consumers {
 			nodeCtx := ctx
@@ -111,9 +138,9 @@ func (b *Broker) startNodes(ctx context.Context) error {
 			if err := n.ScheduleJobs(nodeCtx); err != nil {
 				return err
 			}
-			b.supervisors[b.runningNodes] = n
-			b.runningWorkers += n.runningWorkers.Length()
-			b.runningNodes++
+			b.supervisors[b.activeSupervisors] = n
+			b.activeWorkers += n.runningWorkers.Length()
+			b.activeSupervisors++
 		}
 	}
 	return nil
@@ -170,8 +197,8 @@ func (b *Broker) closeNodes() error {
 			errs = multierror.Append(errs, err)
 			continue
 		}
-		b.runningNodes--
-		b.runningWorkers = n.runningWorkers.Length()
+		b.activeSupervisors--
+		b.activeWorkers = n.runningWorkers.Length()
 		delete(b.supervisors, k)
 	}
 
@@ -190,14 +217,14 @@ func (b *Broker) Topics(topics ...string) *Consumer {
 	return b.EventMux.Topics(topics...)
 }
 
-// RunningNodes returns the current number of running supervisors
-func (b *Broker) RunningNodes() int {
-	return b.runningNodes
+// activeSupervisors returns the current number of running supervisors
+func (b *Broker) ActiveSupervisors() int {
+	return b.activeSupervisors
 }
 
-// RunningWorkers returns the current number of running workers (inside every Supervisor)
-func (b *Broker) RunningWorkers() int {
-	return b.runningWorkers
+// activeWorkers returns the current number of running workers (inside every Supervisor)
+func (b *Broker) ActiveWorkers() int {
+	return b.activeWorkers
 }
 
 func (b *Broker) setDefaultMux() {

@@ -1,6 +1,9 @@
 package quark
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 var (
 	// ErrBrokerClosed the broker was already closed
@@ -20,3 +23,6 @@ var (
 	// ErrRequiredGroup a consumer group is required
 	ErrRequiredGroup = errors.New("consumer group is required")
 )
+
+// ErrorHandler is a Hook that may be called when a error occurs inside Quark processes
+type ErrorHandler func(context.Context, error)

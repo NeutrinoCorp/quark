@@ -111,13 +111,6 @@ func (n *Supervisor) setDefaultRetryBackoff() time.Duration {
 	return n.Broker.setDefaultRetryBackoff() // use global
 }
 
-func (n *Supervisor) setDefaultProvider() string {
-	if provider := n.Consumer.provider; provider != "" {
-		return provider
-	}
-	return n.Broker.Provider // use global
-}
-
 func (n *Supervisor) setDefaultProviderConfig() interface{} {
 	if cfg := n.Consumer.providerConfig; cfg != nil {
 		return cfg

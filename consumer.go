@@ -10,8 +10,6 @@ type Consumer struct {
 	// Topic A Broker will use these topic(s) to subscribe the Consumer
 	//	These field can be also used as Queues
 	topics []string
-	// Provider Message Broker or Messaging Queue system that this specific consumer will use (e.g. Kafka, RabbitMQ)
-	provider string
 	// ProviderConfig Custom provider configuration (e.g. sarama config, aws credentials)
 	providerConfig interface{}
 	// Group set of consumers this specific consumer must be with to consume messages in parallel
@@ -76,7 +74,7 @@ func (c *Consumer) PoolSize(s int) *Consumer {
 	return c
 }
 
-// MaxRetries total times to retry consuming messages if processing fails
+// MaxRetries total times to retry an Event operation if processing fails
 func (c *Consumer) MaxRetries(n int) *Consumer {
 	c.maxRetries = n
 	return c
@@ -85,12 +83,6 @@ func (c *Consumer) MaxRetries(n int) *Consumer {
 // RetryBackoff time to wait between each retry
 func (c *Consumer) RetryBackoff(t time.Duration) *Consumer {
 	c.retryBackoff = t
-	return c
-}
-
-// Provider Message Broker or Messaging Queue system that this specific consumer will use (e.g. Kafka, RabbitMQ)
-func (c *Consumer) Provider(p string) *Consumer {
-	c.provider = p
 	return c
 }
 

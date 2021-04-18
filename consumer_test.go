@@ -52,8 +52,6 @@ func TestConsumer(t *testing.T) {
 		c := Consumer{}
 		c.Topic("chat.1")
 		assert.Contains(t, c.topics, "chat.1")
-		c.Provider(KafkaProvider)
-		assert.Equal(t, "kafka", c.provider)
 		c.PoolSize(10)
 		assert.Equal(t, 10, c.poolSize)
 		c.Address("localhost")
@@ -171,7 +169,6 @@ func BenchmarkConsumer(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			c := Consumer{}
 			c.Topic("chat.1")
-			c.Provider(KafkaProvider)
 			c.PoolSize(10)
 			c.Address("localhost")
 		}

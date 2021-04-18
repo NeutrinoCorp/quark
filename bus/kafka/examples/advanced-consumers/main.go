@@ -38,7 +38,7 @@ func logErrors() func(context.Context, error) {
 func main() {
 	// BDD clause
 	// Create broker
-	b := quark.NewBroker(quark.KafkaProvider, kafka.KafkaConfiguration{
+	kafkaCfg := kafka.KafkaConfiguration{
 		Config: newSaramaCfg(),
 		Consumer: kafka.KafkaConsumerConfig{
 			GroupHandler:     nil,
@@ -49,9 +49,13 @@ func main() {
 			},
 			OnReceived: nil,
 		},
-	})
-	b.Cluster = []string{"localhost:19092", "localhost:29092", "localhost:39092"}
-	b.Publisher = kafka.NewKafkaPublisher(b.ProviderConfig.(kafka.KafkaConfiguration), b.Cluster...)
+	}
+	cluster := []string{"localhost:19092", "localhost:29092", "localhost:39092"}
+	b := quark.NewBroker(
+		quark.WithProviderConfiguration(kafkaCfg),
+		quark.WithCluster(cluster...),
+		quark.WithPublisher(kafka.NewKafkaPublisher(kafkaCfg, cluster...)),
+		quark.WithPoolSize(5))
 
 	// Example: Listen to multiple notifications using specific resiliency configurations
 	b.Topics("bob.notifications", "alice.notifications").Group("notifications").MaxRetries(5).RetryBackoff(time.Second * 3).
@@ -72,7 +76,7 @@ func main() {
 	})
 
 	// Example: Truck GPS tracker using a custom provider and address, fail temporarily (sending message to retry queue)
-	b.Topic("retry.truck.0.gps").Group("retry.truck.0.gps").Provider(quark.KafkaProvider).MaxRetries(3).
+	b.Topic("retry.truck.0.gps").Group("retry.truck.0.gps").MaxRetries(3).
 		Address("localhost:9092", "localhost:9093").RetryBackoff(time.Second * 3).
 		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
 			log.Printf("topic: %s | message: %s", e.Topic, e.RawValue)
@@ -85,7 +89,7 @@ func main() {
 	b.ErrorHandler = logErrors()
 
 	// graceful shutdown
-	stop := make(chan os.Signal)
+	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	go func() {
 		if err := b.ListenAndServe(); err != nil && err != quark.ErrBrokerClosed {
@@ -95,7 +99,7 @@ func main() {
 
 	<-stop
 
-	log.Printf("stopping %d nodes and %d workers", b.RunningNodes(), b.RunningWorkers())
+	log.Printf("stopping %d supervisor(s) and %d worker(s)", b.ActiveSupervisors(), b.ActiveWorkers())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -103,7 +107,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Print(b.RunningNodes(), b.RunningWorkers()) // should be 0,0
+	log.Print(b.ActiveSupervisors(), b.ActiveWorkers()) // should be 0,0
 }
 
 func newSaramaCfg() *sarama.Config {

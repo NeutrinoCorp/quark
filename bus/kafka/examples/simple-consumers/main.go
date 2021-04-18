@@ -13,15 +13,18 @@ import (
 	"github.com/neutrinocorp/quark/bus/kafka"
 )
 
+var customErrHandler = func(ctx context.Context, err error) {
+	log.Print(err)
+}
+
 func main() {
 	// Create broker
-	b := kafka.NewKafkaBroker(newSaramaCfg(), "localhost:9092")
-	b.BaseMessageSource = "https://neutrinocorp.org/cloudevents"
-	b.BaseMessageContentType = "message/partial" // binary RFC content type
-
-	b.ErrorHandler = func(ctx context.Context, err error) {
-		log.Print(err)
-	}
+	b := kafka.NewKafkaBroker(
+		newSaramaCfg(),
+		quark.WithCluster("localhost:9092"),
+		quark.WithBaseMessageSource("https://neutrinocorp.org/cloudevents"),
+		quark.WithBaseMessageContentType("message/partial"),
+		quark.WithErrorHandler(customErrHandler))
 
 	b.Topics("chat.0").PoolSize(1).MaxRetries(3).
 		HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
@@ -50,7 +53,7 @@ func main() {
 		})
 
 	// graceful shutdown
-	stop := make(chan os.Signal)
+	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	go func() {
 		if err := b.ListenAndServe(); err != nil && err != quark.ErrBrokerClosed {
@@ -60,7 +63,7 @@ func main() {
 
 	<-stop
 
-	log.Printf("stopping %d nodes and %d workers", b.RunningNodes(), b.RunningWorkers())
+	log.Printf("stopping %d supervisor(s) and %d worker(s)", b.ActiveSupervisors(), b.ActiveWorkers())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -68,7 +71,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Print(b.RunningNodes(), b.RunningWorkers()) // should be 0,0
+	log.Print(b.ActiveSupervisors(), b.ActiveWorkers()) // should be 0,0
 }
 
 func newSaramaCfg() *sarama.Config {
