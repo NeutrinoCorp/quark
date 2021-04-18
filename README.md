@@ -1,5 +1,5 @@
 # :zap: Quark [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Report Status][rep-img]][rep] [![Codebeat][beat-img]][beat] [![Go Version][go-img]][go]
-A **_Reliable_** and **_fully customizable_** **Event Router** for Event-Driven systems written in Go.
+A **_Reliable_** and **_fully customizable_** **event router** for Event-Driven systems written in Go.
 
 Based on reliable mechanisms from companies such as [Uber](https://eng.uber.com/reliable-reprocessing/), 
 `Quark` offers an Event Router with a fine-tuned set of tools to ease messaging communication complexity.
