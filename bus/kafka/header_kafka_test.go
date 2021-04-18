@@ -25,12 +25,12 @@ func TestNewKafkaHeader(t *testing.T) {
 		}
 
 		h := NewKafkaHeader(kafkaMsg)
-		assert.Equal(t, strconv.Itoa(int(kafkaMsg.Partition)), h.Get(HeaderKafkaPartition))
-		assert.Equal(t, strconv.Itoa(int(kafkaMsg.Offset)), h.Get(HeaderKafkaOffset))
-		assert.Equal(t, string(kafkaMsg.Key), h.Get(HeaderKafkaKey))
-		assert.Equal(t, string(kafkaMsg.Value), h.Get(HeaderKafkaValue))
-		assert.Equal(t, kafkaMsg.Timestamp.String(), h.Get(HeaderKafkaTimestamp))
-		assert.Equal(t, kafkaMsg.BlockTimestamp.String(), h.Get(HeaderKafkaBlockTimestamp))
+		assert.Equal(t, strconv.Itoa(int(kafkaMsg.Partition)), h.Get(HeaderPartition))
+		assert.Equal(t, strconv.Itoa(int(kafkaMsg.Offset)), h.Get(HeaderOffset))
+		assert.Equal(t, string(kafkaMsg.Key), h.Get(HeaderKey))
+		assert.Equal(t, string(kafkaMsg.Value), h.Get(HeaderValue))
+		assert.Equal(t, kafkaMsg.Timestamp.String(), h.Get(HeaderTimestamp))
+		assert.Equal(t, kafkaMsg.BlockTimestamp.String(), h.Get(HeaderBlockTimestamp))
 		assert.Equal(t, string(kafkaMsg.Headers[0].Value), h.Get(quark.HeaderMessageId))
 	})
 }

@@ -10,11 +10,11 @@ import (
 
 // MarshalKafkaMessage parses the given Message into a Apache Kafka producer message
 func MarshalKafkaMessage(msg *quark.Message) *sarama.ProducerMessage {
-	partition, err := strconv.ParseInt(msg.Metadata.ExternalData[HeaderKafkaPartition], 10, 32)
+	partition, err := strconv.ParseInt(msg.Metadata.ExternalData[HeaderPartition], 10, 32)
 	if err != nil {
 		partition = 0
 	}
-	offset, err := strconv.ParseInt(msg.Metadata.ExternalData[HeaderKafkaOffset], 10, 64)
+	offset, err := strconv.ParseInt(msg.Metadata.ExternalData[HeaderOffset], 10, 64)
 	if err != nil {
 		offset = 0
 	}

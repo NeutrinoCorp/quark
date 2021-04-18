@@ -228,7 +228,7 @@ This can be done by calling the `EventWriter.Get()` and `EventWriter.Set()` meth
 ```go
 b.Topic("chat.1").HandleFunc(func(w quark.EventWriter, e *quark.Event) bool {
   // ...
-  partition := w.Header().Get(kafka.HeaderKafkaPartition)
+  partition := w.Header().Get(kafka.HeaderPartition)
   w.Header().Set(quark.HeaderMessageDataContentType, "application/avro")
   _, _ = w.Write(e.Context, e.Body.Data, "dlq.chat.1") // will use new Content-Type header
   return true
