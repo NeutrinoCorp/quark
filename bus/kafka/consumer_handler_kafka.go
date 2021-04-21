@@ -95,6 +95,7 @@ func (k *defaultKafkaConsumer) ConsumeClaim(session sarama.ConsumerGroupSession,
 			evWriter.ReplaceHeader(newQuarkHeaders(h))
 			if commit := handler.ServeEvent(evWriter, e); commit {
 				session.MarkMessage(msgConsumer, "")
+				session.Commit()
 			}
 		}
 		if handlerFunc := k.worker.parent.Consumer.GetHandleFunc(); handlerFunc != nil {
@@ -103,6 +104,7 @@ func (k *defaultKafkaConsumer) ConsumeClaim(session sarama.ConsumerGroupSession,
 			evWriter.ReplaceHeader(newQuarkHeaders(h))
 			if commit := handlerFunc(evWriter, e); commit {
 				session.MarkMessage(msgConsumer, "")
+				session.Commit()
 			}
 		}
 
