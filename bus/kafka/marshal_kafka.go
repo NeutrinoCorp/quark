@@ -31,7 +31,7 @@ func MarshalKafkaMessage(msg *quark.Message) *sarama.ProducerMessage {
 
 // MarshalKafkaHeaders parses the given Message and its metadata into Apache Kafka's header types
 func MarshalKafkaHeaders(msg *quark.Message) []sarama.RecordHeader {
-	publishTime, err := msg.Time.MarshalBinary()
+	publishTime, err := msg.Time.MarshalText()
 	if err != nil {
 		publishTime = []byte(msg.Time.String())
 	}
@@ -103,7 +103,7 @@ func UnmarshalKafkaHeaders(headers []*sarama.RecordHeader, msg *quark.Message) {
 			msg.Subject = string(f.Value)
 		case quark.HeaderMessageTime:
 			t := time.Time{}
-			if err := t.UnmarshalBinary(f.Value); err == nil {
+			if err := t.UnmarshalText(f.Value); err == nil {
 				msg.Time = t
 			}
 		case quark.HeaderMessageData:
